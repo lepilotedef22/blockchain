@@ -1,33 +1,73 @@
 # !/usr/bin/env python3
 # coding: utf-8
 
+"""
+This module deals with the transmitter super class. This class needs to be able to send a message to another host.
+"""
+
 __author__ = "Denis Verstraeten & Arthur Van Heirstraeten"
 __date__ = "27.11.2018"
 
 # ------------------------------------------------------ IMPORT ------------------------------------------------------ #
 
-import socket
+from socket import socket
+from src.model.ComHelper import format_message
 
 
 class TX:
 
+    # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
+
     def __init__(self, ip, port):
+
+        """
+        Constructor
+        :param ip: ip address of the TX host
+        :param port: port of the TX host
+        """
 
         self.ip = ip
         self.port = port
+        self.socket = socket()  # AF_INET and SOCK_STREAM are default values
+        self.socket.bind((self.ip, self.port))
 
-    def send(self, dest_ip, dest_port, msg):
+    # --------------------------------------------------- METHODS --------------------------------------------------- #
+
+    def send(self, dest_ip: int, dest_port: int, msg: str, protocol: function=None, **kwargs) -> None:
 
         """
+        Main method of the class. Sends the message msg to the remote host defined by (dest_ip, dest_port). Uses the
+        function protocol if a bi-directional non-trivial communication needs to take place
 
-        :param dest_ip:
-        :param dest_port:
-        :param msg:
-        :return:
+        Credit : https://docs.python.org/3/howto/sockets.html
+
+        :param protocol: protocol function be executed in the case of a bi-directional communication
+        :param dest_ip: ip of the remote host
+        :param dest_port: port of the remote host
+        :param msg: string to be sent
         """
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind((self.ip, self.port))
-        s.connect((dest_ip, dest_port))
-        s.send(str.encode(msg))
-        s.close()
+        self.socket.connect((dest_ip, dest_port))
+
+        if protocol is not None:
+
+            protocol(kwargs)
+
+        else:
+
+            number_length_coding_bytes = 2
+            message = format_message(msg, number_length_coding_bytes)
+            message_length = len(message)
+            total_sent = 0
+
+            while total_sent < message_length:
+
+                sent = self.socket.send(message[total_sent:])
+
+                if sent == 0:
+
+                    raise RuntimeError("Socket connection broken")
+
+                total_sent += sent
+
+        self.socket.close()
