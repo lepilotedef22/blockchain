@@ -2,13 +2,15 @@
 # coding: utf-8
 
 """
-This module deals with the transmitter super class. This class needs to be able to send a message to another host.
+This module deals with the transmitter super class. This class needs to be able to send a message to another host. And
+it should also be able to have a bi-directional communication with server according to a given protocol. It is used for
+the client-side of the architecture
 """
 
 __author__ = "Denis Verstraeten & Arthur Van Heirstraeten"
 __date__ = "27.11.2018"
 
-# ------------------------------------------------------ IMPORT ------------------------------------------------------ #
+# ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 from socket import socket
 from src.model.ComHelper import format_message
@@ -18,7 +20,7 @@ class TX:
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
-    def __init__(self, ip, port):
+    def __init__(self, ip: int, port: int) -> None:
 
         """
         Constructor
@@ -51,9 +53,13 @@ class TX:
 
         if protocol is not None:
 
+            # bi-directional communication
+
             protocol(kwargs)
 
         else:
+
+            # uni-directional communication
 
             number_length_coding_bytes = 2
             message = format_message(msg, number_length_coding_bytes)

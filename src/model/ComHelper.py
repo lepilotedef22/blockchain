@@ -24,6 +24,6 @@ def format_message(msg: str, num_bytes: int) -> bytes:
     :return: the bytes message sent by the socket
     """
 
-    msg_length = len(msg)
+    msg_length = len(msg) + num_bytes
     length_in_bytes = msg_length.to_bytes(num_bytes, byteorder)
     return length_in_bytes + str.encode(msg)
