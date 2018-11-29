@@ -1,7 +1,6 @@
 # !/usr/bin/env python3
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
-__author__ = "Denis Verstraeten"
 __date__ = "27.11.2018"
 
 """

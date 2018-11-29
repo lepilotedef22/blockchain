@@ -1,5 +1,5 @@
 # !/usr/bin/env python3
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
 """
 This module deals with the transmitter super class. This class needs to be able to send a message to another host. And
@@ -7,20 +7,23 @@ it should also be able to have a bi-directional communication with server accord
 the client-side of the architecture
 """
 
-__author__ = "Denis Verstraeten & Arthur Van Heirstraeten"
 __date__ = "27.11.2018"
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 from socket import socket
-from src.model.ComHelper import format_message
+from src import format_message
 
 
 class TX:
 
+    """
+    This class is used as a RX for socket communication. It is supposed to be specialised through inheritance
+    """
+
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
-    def __init__(self, ip: int, port: int) -> None:
+    def __init__(self, ip: str, port: int) -> None:
 
         """
         Constructor
@@ -35,7 +38,7 @@ class TX:
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
-    def send(self, dest_ip: int, dest_port: int, msg: str, protocol: function=None, **kwargs) -> None:
+    def send(self, dest_ip: str, dest_port: int, msg: str, protocol=None, **kwargs) -> None:
 
         """
         Main method of the class. Sends the message msg to the remote host defined by (dest_ip, dest_port). Uses the

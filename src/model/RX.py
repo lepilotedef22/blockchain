@@ -1,5 +1,5 @@
 # !/usr/bin/env python3
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
 """
 This module deals with the receiver super class. This class needs to be able to receive a message from another host. It
@@ -7,7 +7,6 @@ should also be able to have a bi-directional communication with a client accordi
 the server-side of the architecture
 """
 
-__author__ = "Denis Verstraeten"
 __date__ = "27.11.2018"
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
@@ -18,9 +17,13 @@ from sys import byteorder
 
 class RX:
 
+    """
+    This class is used as a RX for socket communication. It is supposed to be specialised through inheritance
+    """
+
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
-    def __init__(self, ip: int, port: int) -> None:
+    def __init__(self, ip: str, port: int) -> None:
 
         """
         Constructor of the RX class
@@ -35,7 +38,7 @@ class RX:
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
-    def receive(self, protocol: function=None, **kwargs):
+    def receive(self, protocol=None, **kwargs) -> str:
 
         """
         Main method of the class. Listens for incoming messages sent by remote_hosts. Uses the function protocol if a
@@ -44,39 +47,38 @@ class RX:
         Credit : https://docs.python.org/3/howto/sockets.html
 
         :param protocol: protocol function be executed in the case of a bi-directional communication
+        :return: the received message
         """
 
-        while True:
+        self.socket.listen(5)  # listens for up to 5 connections
+        client_socket, address = self.socket.accept()
 
-            # main listening loop of the server
+        if protocol is not None:
 
-            self.socket.listen(5)  # listens for up to 5 connections
-            client_socket, address = self.socket.accept()
+            # bi-directional communication
 
-            if protocol is not None:
+            protocol(kwargs)
 
-                # bi-directional communication
+        else:
 
-                protocol(kwargs)
+            # uni-directional communication
 
-            else:
+            chunks = []
+            bytes_received = 0
+            number_length_coding_bytes = 2
+            length_coding_bytes = client_socket.recv(number_length_coding_bytes)
+            max_length = int.from_bytes(length_coding_bytes, byteorder)
+            bytes_received += length_coding_bytes
 
-                # uni-directional communication
+            while bytes_received < max_length:
 
-                chunks = []
-                bytes_received = 0
-                number_length_coding_bytes = 2
-                length_coding_bytes = self.socket.recv(number_length_coding_bytes)
-                max_length = int.from_bytes(length_coding_bytes, byteorder)
-                bytes_received += length_coding_bytes
+                chunk = client_socket.recv(min(max_length - bytes_received, 4096))  # 4096 is arbitrary
 
-                while bytes_received < max_length:
+                if chunk == b"":
 
-                    chunk = self.socket.recv(min(max_length - bytes_received, 4096))  # 4096 is arbitrary
+                    raise RuntimeError("Socket connection broken")
 
-                    if chunk == b"":
+                chunks.append(chunk)
+                bytes_received += len(chunk)
 
-                        raise RuntimeError("Socket connection broken")
-
-                    chunks.append(chunk)
-                    bytes_received += len(chunk)
+            return b"".join(chunks).decode("utf-8")
