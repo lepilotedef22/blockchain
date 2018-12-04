@@ -16,10 +16,10 @@ __date__ = "30/11/2018"
 
 from src import AuthenticateRX
 from hashlib import sha256
-import threading
+from threading import Thread
 
 
-class Authenticate(threading):
+class Authenticate(Thread):
 
     """
     This class is responsible for the authenticate server used to validate the nodes on the network
@@ -33,7 +33,8 @@ class Authenticate(threading):
         Constructor of the authenticate server
         """
 
-        self.auth_rx = AuthenticateRX("42.42.42.42", 4242)  # TODO parse ini to get ip
+        super().__init__()
+        self.auth_rx = AuthenticateRX("localhost", 4242)  # TODO parse ini to get ip
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
@@ -46,8 +47,8 @@ class Authenticate(threading):
 
         while True:
 
+            print(self.auth_rx.receive())
             # Main loop of the authentication server
             # TODO implement the main loop
 
-            print("lolilol")
 

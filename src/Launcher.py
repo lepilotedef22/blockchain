@@ -1,5 +1,8 @@
 from src.model.RX import RX
 from src.model.TX import TX
+import threading
+from src import Authenticate
+from src import Node
 
 
 class Launcher:
@@ -7,12 +10,11 @@ class Launcher:
     def __init__(self):
         # Not working
         print("New simulation started")
-        rx = RX("localhost", 27015)
-        tx = TX("localhost", 4242)
-        tx.send("localhost", 27015, "J'essaie")
-        message = rx.receive()
-        print(message)
+        self.auth = Authenticate()
+        self.node = Node()
 
 
 if __name__ == "__main__":
-    Launcher()
+    launcher = Launcher()
+    launcher.auth.start()
+    launcher.node.start()

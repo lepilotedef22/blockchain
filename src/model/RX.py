@@ -66,9 +66,9 @@ class RX:
             chunks = []
             bytes_received = 0
             number_length_coding_bytes = 2
-            length_coding_bytes = client_socket.recv(number_length_coding_bytes)
-            max_length = int.from_bytes(length_coding_bytes, byteorder)
-            bytes_received += length_coding_bytes
+            length_coding_bytes = int.from_bytes(client_socket.recv(number_length_coding_bytes), byteorder)
+            max_length = length_coding_bytes
+            bytes_received += number_length_coding_bytes
 
             while bytes_received < max_length:
 
