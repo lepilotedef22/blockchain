@@ -24,5 +24,5 @@ def format_message(msg: str, num_bytes: int) -> bytes:
     """
 
     msg_length = len(msg) + num_bytes
-    length_in_bytes = msg_length.to_bytes(num_bytes, byteorder)
+    length_in_bytes = msg_length.to_bytes(num_bytes, byteorder, signed=False)
     return length_in_bytes + str.encode(msg)

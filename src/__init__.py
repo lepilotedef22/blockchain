@@ -7,6 +7,7 @@ from src.model.RX import RX
 from src.model.AuthenticateRX import AuthenticateRX
 from src.model.ComHelper import *
 from src.model.TX import TX
+from src.model.Exceptions.BlockNotValidException import BlockNotValidException
 
 # ------------------------------------------------------- VARS ------------------------------------------------------- #
 

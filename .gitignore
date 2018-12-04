@@ -4,3 +4,4 @@
 src/__pycache__
 tests/__pycache__
 src/model/__pycache__
+src/model/Exceptions/__pycache__

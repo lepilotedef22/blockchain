@@ -72,7 +72,7 @@ class RX:
 
             while bytes_received < max_length:
 
-                chunk = client_socket.recv(min(max_length - bytes_received, 4096))  # 4096 is arbitrary
+                chunk = client_socket.recv(min(max_length - bytes_received, 1024))  # 4096 is arbitrary
 
                 if chunk == b"":
 
