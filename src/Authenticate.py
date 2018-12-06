@@ -22,6 +22,8 @@ from src.model import Constants
 from os import urandom
 from re import sub
 from hashlib import sha256
+from src import TX
+from base64 import b64encode
 
 
 class Authenticate(Thread):
@@ -79,25 +81,29 @@ class Authenticate(Thread):
             return b"".join(chunks).decode("utf-8")
 
     def onNewClient(self, client_socket, addr):
+        authTX = TX(self.ip, 4243, addr[0], 4242)
         username = ""
         password = "1234"
-        nonce = "abc"
+        nonce = ""
         while True:
             msg = self.receive(client_socket)
             if msg == Constants.AUTH_MSG:
                 print("new registration received")
-                # nonce = urandom(8) # Remove when communication is bidirectional
-                password = sha256((nonce+password).encode('utf-8')).hexdigest()
-                # TODO send nonce to node
+                nonce = b64encode(urandom(64)).decode('utf-8')  # Remove when communication is bidirectional
+                password = sha256((nonce + password).encode('utf-8')).hexdigest()
+                authTX.send(nonce)
             elif "username:" in msg:
                 username = sub("username:", "", msg)
-                print(username)
+                print("User: ", username)
             elif "password:" in msg:
                 password_recvd = sub("password:", "", msg)
                 if password_recvd == password:
                     print("correct password")
+                    authTX.send("Connection successful")
+                    break
                 else:
                     print("wrong password")
+                    authTX.send("Connection failed")
             else:
                 print(addr, ' >> ', msg)
 
