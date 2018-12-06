@@ -35,6 +35,7 @@ class TX:
         self.port = port
         self.socket = socket()  # AF_INET and SOCK_STREAM are default values
         self.socket.bind((self.ip, self.port))
+        self.socket.connect(("127.0.0.1", 4242))
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
@@ -52,7 +53,7 @@ class TX:
         :param msg: string to be sent
         """
 
-        self.socket.connect((dest_ip, dest_port))
+
 
         if protocol is not None:
 
@@ -79,4 +80,4 @@ class TX:
 
                 total_sent += sent
 
-        self.socket.close()
+
