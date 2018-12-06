@@ -14,12 +14,14 @@ __date__ = "30/11/2018"
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from src import AuthenticateRX
-from hashlib import sha256
 from threading import Thread
 import _thread
 from socket import socket
 from sys import byteorder
+from src.model import Constants
+from os import urandom
+from re import sub
+from hashlib import sha256
 
 
 class Authenticate(Thread):
@@ -30,14 +32,14 @@ class Authenticate(Thread):
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
-    def __init__(self, ip) -> None:
+    def __init__(self) -> None:
 
         """
         Constructor of the authenticate server
         """
 
         super().__init__()
-        self.ip = ip
+        self.ip = "127.0.0.10"  # As defined in the assignment
         self.port = 4242
         self.socket = socket()  # AF_INET and SOCK_STREAM are default values
         self.socket.bind((self.ip, self.port))
@@ -45,7 +47,8 @@ class Authenticate(Thread):
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
-    def receive(self, client_socket, protocol=None, **kwargs) -> str:
+    @staticmethod
+    def receive(client_socket, protocol=None, **kwargs) -> str:
         if protocol is not None:
 
             # bi-directional communication
@@ -76,9 +79,26 @@ class Authenticate(Thread):
             return b"".join(chunks).decode("utf-8")
 
     def onNewClient(self, client_socket, addr):
+        username = ""
+        password = "1234"
+        nonce = "abc"
         while True:
             msg = self.receive(client_socket)
-            if msg != "":
+            if msg == Constants.AUTH_MSG:
+                print("new registration received")
+                # nonce = urandom(8) # Remove when communication is bidirectional
+                password = sha256((nonce+password).encode('utf-8')).hexdigest()
+                # TODO send nonce to node
+            elif "username:" in msg:
+                username = sub("username:", "", msg)
+                print(username)
+            elif "password:" in msg:
+                password_recvd = sub("password:", "", msg)
+                if password_recvd == password:
+                    print("correct password")
+                else:
+                    print("wrong password")
+            else:
                 print(addr, ' >> ', msg)
 
     def run(self) -> None:

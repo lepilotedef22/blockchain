@@ -1,17 +1,28 @@
 from src import TX
 from threading import Thread
 import time
+from src.model import Constants
+from hashlib import sha256
+
 
 class Node(Thread):
     def __init__(self, ip):
         super().__init__()
-        self.nodeTX = TX(ip, 4243)
+        self.authTX = TX(ip, 4243, Constants.server_ip, 4242)
         #TODO
         print("New node")
 
+    def authenticate(self):
+        self.authTX.send(Constants.AUTH_MSG)
+
     def run(self) -> None:
-        self.nodeTX.send("127.0.0.1", 4242, "Hello world")
+        nonce = "abc"
+        password = "12345"
+        self.authenticate()
+        self.authTX.send("username:Martine")
         time.sleep(1)
-        self.nodeTX.send("127.0.0.1", 4242, "I'm Alice")
+        self.authTX.send("password:" + sha256((nonce + password).encode('utf-8')).hexdigest())
         time.sleep(1)
-        self.nodeTX.send("127.0.0.1", 4242, "You are Bob")
+        self.authTX.send("I'm Alice")
+        time.sleep(1)
+        self.authTX.send("You are Bob")

@@ -23,7 +23,7 @@ class TX:
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
-    def __init__(self, ip: str, port: int) -> None:
+    def __init__(self, ip: str, port: int, dest_ip: str, dest_port: int) -> None:
 
         """
         Constructor
@@ -35,11 +35,11 @@ class TX:
         self.port = port
         self.socket = socket()  # AF_INET and SOCK_STREAM are default values
         self.socket.bind((self.ip, self.port))
-        self.socket.connect(("127.0.0.1", 4242))
+        self.socket.connect((dest_ip, dest_port))
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
-    def send(self, dest_ip: str, dest_port: int, msg: str, protocol=None, **kwargs) -> None:
+    def send(self, msg: str, protocol=None, **kwargs) -> None:
 
         """
         Main method of the class. Sends the message msg to the remote host defined by (dest_ip, dest_port). Uses the
