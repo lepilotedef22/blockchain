@@ -47,6 +47,11 @@ class Authenticate(Thread):
         self.socket.bind((self.ip, self.port))
         self.socket.listen(5)
 
+        self.user_list = {
+            "Alice": "1234",
+            "Bob": "5678"
+        }
+
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
     @staticmethod
@@ -83,20 +88,21 @@ class Authenticate(Thread):
     def onNewClient(self, client_socket, addr):
         authTX = TX(self.ip, 4243, addr[0], 4242)
         username = ""
-        password = "1234"
+        password = ""
         nonce = ""
         while True:
             msg = self.receive(client_socket)
             if msg == Constants.AUTH_MSG:
                 print("new registration received")
-                nonce = b64encode(urandom(64)).decode('utf-8')  # Remove when communication is bidirectional
-                password = sha256((nonce + password).encode('utf-8')).hexdigest()
+                nonce = b64encode(urandom(64)).decode('utf-8')
                 authTX.send(nonce)
-            elif "username:" in msg:
-                username = sub("username:", "", msg)
-                print("User: ", username)
-            elif "password:" in msg:
-                password_recvd = sub("password:", "", msg)
+            elif Constants.AUTH_USR in msg:
+                username = sub(Constants.AUTH_USR, "", msg)
+                password = self.user_list[username]
+                print("User:", username)
+            elif Constants.AUTH_PSWD in msg:
+                password_recvd = sub(Constants.AUTH_PSWD, "", msg)
+                password = sha256((nonce + password).encode('utf-8')).hexdigest()
                 if password_recvd == password:
                     print("correct password")
                     authTX.send("Connection successful")

@@ -12,6 +12,8 @@ class Node(Thread):
     def __init__(self, ip):
         super().__init__()
         self.ip = ip
+        self.username = "Alice"
+        self.password = "1234"
         self.authTX = TX(ip, 4243, Constants.server_ip, 4242)
         self.socket = socket()  # AF_INET and SOCK_STREAM are default values
         self.socket.bind((self.ip, 4242))
@@ -51,15 +53,14 @@ class Node(Thread):
             return b"".join(chunks).decode("utf-8")
 
     def authenticate(self):
-        password = "1234"
         c, addr = self.socket.accept()
         self.authTX.send(Constants.AUTH_MSG)
         nonce = self.receive(c)
         time.sleep(0.1)
-        self.authTX.send("username:Martine")
+        self.authTX.send(Constants.AUTH_USR + self.username)
         time.sleep(0.1)
-        hash = sha256((nonce + password).encode('utf-8')).hexdigest()
-        self.authTX.send("password:" + hash)
+        hash = sha256((nonce + self.password).encode('utf-8')).hexdigest()
+        self.authTX.send(Constants.AUTH_PSWD + hash)
         response = self.receive(c)
         print(response)
 
