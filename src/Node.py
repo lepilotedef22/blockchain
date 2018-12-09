@@ -46,12 +46,12 @@ class Node(Thread):
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
-    def __authenticate(self, socket: socket) -> None:
+    def __authenticate(self, send_socket: socket) -> None:
 
         """
         Authenticates the node to the authentication center. Once the node is authenticated, its authenticated attribute
         is switched to True
-        :param socket: the socket used to communicate with the authentication center
+        :param send_socket: the socket used to communicate with the authentication center
         """
 
     # ----------------------------------------------------- RUN ----------------------------------------------------- #
