@@ -4,13 +4,15 @@
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 # Typing
-from typing import Optional
+from typing import Optional, Dict
+
+from abc import ABC, abstractmethod
 
 
 __date__ = "09.12.2018"
 
 
-class Bitcop:
+class Bitcop(ABC):
 
     """
     Super class dealing with the messages used to communicate in the Bitcop protocol. It possesses class constants
@@ -34,14 +36,16 @@ class Bitcop:
     AUTH_CHAL = 11  # Message is authenticate challenge
     AUTH_RESP = 12  # Message is authenticate response
     AUTH_OK = 13  # Message is authenticate OK
+    AUTH_ABORT = 14  # Message is abort authentication
 
-    AUTH = [AUTH_REQ, AUTH_CHAL, AUTH_RESP, AUTH_OK]
+    AUTH = [AUTH_REQ, AUTH_CHAL, AUTH_RESP, AUTH_OK, AUTH_ABORT]
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CONSTANTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
     HEADER = "bitcop"  # Header of the protocol
     NUMBER_BYTES_LENGTH = 2  # Number of bytes used to represent the length of the messages
     NUMBER_BYTES_CODE = 2  # Number of bytes used to represent the code
+    NUMBER_BYTES_NONCE = 16  # Number of bytes of the nonce
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
@@ -58,5 +62,25 @@ class Bitcop:
             is being created to send a new message.
         """
 
-        self.code = code
-        self.data_rcv = data_rcv
+        self.code: int = code
+        self.data_rcv: bytes = data_rcv
+
+    # ----------------------------------------------- ABSTRACT METHODS ----------------------------------------------- #
+
+    @abstractmethod
+    def __bytes__(self) -> bytes:
+        """
+        Translates the request into a byte stream. Needs to be implemented.
+        :return: the byte stream
+        """
+
+        pass
+
+    @abstractmethod
+    def get_request(self) -> Dict:
+        """
+        Get the request information in a dictionary. Needs to be implemented.
+        :return: dictionary containing the information of the message
+        """
+
+        pass

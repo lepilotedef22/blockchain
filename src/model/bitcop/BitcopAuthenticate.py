@@ -71,6 +71,11 @@ class BitcopAuthenticate(Bitcop):
                 # Response in the challenge-response scheme
                 self.data = tuple(parsed_msg['data'].split(','))
 
+            elif code == Bitcop.AUTH_CHAL:
+
+                # Challenge in the challenge-response scheme
+                self.data = int.from_bytes(parsed_msg['data'].encode('latin-1'), byteorder)
+
             else:
 
                 self.data = parsed_msg['data']
@@ -91,18 +96,23 @@ class BitcopAuthenticate(Bitcop):
 
                 # Message is a response in the challenge-response scheme
                 data_str = "{0},{1}".format(self.data[0], self.data[1].digest())
-                data = data_str.encode('utf-8')
+                data = data_str.encode('latin-1')
+
+            elif self.code == Bitcop.AUTH_CHAL:
+
+                # Message is a challenge in the challenge-response scheme
+                data = self.data.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder)
 
             else:
 
                 # Any other kind of authenticate message
-                data = self.data.encode('utf-8')
+                data = self.data.encode('latin-1')
 
             length = len(Bitcop.HEADER) + Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE + len(data)
             length_bytes = length.to_bytes(Bitcop.NUMBER_BYTES_LENGTH, byteorder)
             code_bytes = self.code.to_bytes(Bitcop.NUMBER_BYTES_CODE, byteorder)
 
-            return Bitcop.HEADER.encode('utf-8') + length_bytes + code_bytes + data
+            return Bitcop.HEADER.encode('latin-1') + length_bytes + code_bytes + data
 
         else:
 
