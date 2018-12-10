@@ -39,7 +39,7 @@ def format_message(msg: str, num_bytes: int) -> bytes:
     return length_in_bytes + str.encode(msg)
 
 
-def parse_config_node(index: int) -> Dict:
+def parse_config(index: int) -> Dict:
 
     """
     Parses the .ini conf file related to the node at index. The conf file has the structure :
