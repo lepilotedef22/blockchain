@@ -40,6 +40,7 @@ def format_message(msg: str, num_bytes: int) -> bytes:
 
 
 def parse_bytes_stream_from_message(msg: bytes,
+                                    header: str,
                                     length_bytes: int,
                                     code_bytes: int,
                                     ) -> Dict:
@@ -48,13 +49,13 @@ def parse_bytes_stream_from_message(msg: bytes,
     Returns the information contained in the message bytes as a dictionary
     :param msg: Bytes given in the format defined in the Bitcop protocol :
         "Bitcop" | Length | Code | Data
+    :param header: header on the protocol
     :param length_bytes: number of bytes used to represent the length of the message
     :param code_bytes: number of bytes used to represent the message codes
     :return: A dictionary : {"Code": Code,
                             "Data": Data}
     """
 
-    header = "bitcop"
     code = int.from_bytes(msg[len(header) + length_bytes:
                               len(header) + length_bytes + code_bytes],
                           byteorder)

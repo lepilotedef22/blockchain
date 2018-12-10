@@ -12,7 +12,7 @@ from src.Authenticate import Authenticate
 from src.Node import Node
 from src.model.Block import Block
 from src.model.Blockchain import Blockchain
-from src.model.bitcop.BitcopMessage import BitcopMessage
+from src.model.bitcop.Bitcop import Bitcop
 from src.model.bitcop.Exceptions.CodeNotValidException import CodeNotValidException
 
 # ------------------------------------------------------- VARS ------------------------------------------------------- #
