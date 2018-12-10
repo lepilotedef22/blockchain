@@ -31,12 +31,7 @@ class CodeNotValidException(Exception):
         :param valid_codes: list of the valid codes for this class of message
         """
 
-        if message is not None:
-
-            super().__init__(message)
-            self.message = message
-
-        elif code is not None and valid_codes is not None:
+        if code is not None and valid_codes is not None:
 
             # Credit : https://stackoverflow.com/questions/7568627/using-python-string-formatting-with-lists
             formatted_list = ['{:>3}' for item in valid_codes]
@@ -44,5 +39,5 @@ class CodeNotValidException(Exception):
             codes_string = string_list.format(*valid_codes)
             message = "Code {0} does not belong to allowed AUTHENTICATION codes :{1}".format(code, codes_string)
 
-            super().__init__(message)
-            self.message = message
+        super().__init__(message)
+        self.message = message
