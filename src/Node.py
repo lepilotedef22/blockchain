@@ -1,68 +1,74 @@
-from src import TX
-from src import RX
+# !/usr/bin/env python3
+# -*- coding: utf-! -*-
+
+# ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
+
 from threading import Thread
-import time
-from src.model import Constants
-from hashlib import sha256
-from sys import byteorder
+from src import parse_config_node, Blockchain
 from socket import socket
 
 
+__date__ = "07.12.2018"
+
+
 class Node(Thread):
-    def __init__(self, ip):
+
+    """
+    Class representing a node of the network.
+    """
+
+    # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
+
+    def __init__(self,
+                 node_idx: int
+                 ) -> None:
+
+        """
+        Constructor of the Node class
+        :param node_idx: index of the node used to find the config file to parse
+        """
+
         super().__init__()
-        self.ip = ip
-        self.username = "Alice"
-        self.password = "1234"
-        self.authTX = TX(ip, 4243, Constants.server_ip, 4242)
-        self.socket = socket()  # AF_INET and SOCK_STREAM are default values
-        self.socket.bind((self.ip, 4242))
-        self.socket.listen(5)
-        #TODO
-        print("New node")
 
-    @staticmethod
-    def receive(client_socket, protocol=None, **kwargs) -> str:
-        if protocol is not None:
+        # Parsing config files
+        # TODO : update network topology according to assignment
+        config = parse_config_node(node_idx)
+        self.username = config['node']['username']
+        self.ip = config['node']['ip_address']  # Alias loopback address (cf. assignment)
+        self.authenticate_ip = config['registration']['ip_address']
+        self.secret = config['registration']['secret']
+        self.neighbours_ip = config['neighbours']
 
-                # bi-directional communication
+        self.port = 5001  # Arbitrary, given in the assignment
+        self.connected_neighbours = {}  # Storing the connected neighbours to allow the communication: {ip: socket}
+        self.blockchain = Blockchain()
+        self.authenticated = False  # Authenticated to the network ?
 
-            protocol(kwargs)
+    # --------------------------------------------------- METHODS --------------------------------------------------- #
 
-        else:
+    def __authenticate(self, send_socket: socket) -> None:
 
-                # uni-directional communication
+        """
+        Authenticates the node to the authentication center. Once the node is authenticated, its authenticated attribute
+        is switched to True
+        :param send_socket: the socket used to communicate with the authentication center
+        """
 
-            chunks = []
-            bytes_received = 0
-            number_length_coding_bytes = 2
-            length_coding_bytes = int.from_bytes(client_socket.recv(number_length_coding_bytes), byteorder)
-            max_length = length_coding_bytes
-            bytes_received += number_length_coding_bytes
-
-            while bytes_received < max_length:
-
-                chunk = client_socket.recv(min(max_length - bytes_received, 1024))  # 4096 is arbitrary
-
-                if chunk == b"":
-                    raise RuntimeError("Socket connection broken")
-
-                chunks.append(chunk)
-                bytes_received += len(chunk)
-
-            return b"".join(chunks).decode("utf-8")
-
-    def authenticate(self):
-        c, addr = self.socket.accept()
-        self.authTX.send(Constants.AUTH_MSG)
-        nonce = self.receive(c)
-        time.sleep(0.1)
-        self.authTX.send(Constants.AUTH_USR + self.username)
-        time.sleep(0.1)
-        hash = sha256((nonce + self.password).encode('utf-8')).hexdigest()
-        self.authTX.send(Constants.AUTH_PSWD + hash)
-        response = self.receive(c)
-        print(response)
+    # ----------------------------------------------------- RUN ----------------------------------------------------- #
 
     def run(self) -> None:
-        self.authenticate()
+
+        """
+        Main method of the Node thread :
+            1. tries to be authenticated on the network by the authentication center
+        """
+
+        with socket() as sock:
+
+            # Creating as socket with default mode : IPv4 and TCP
+            sock.bind((self.ip, self.port))
+
+            while not self.authenticated:
+
+                # Trying to be authenticated on the network
+                self.__authenticate(sock)
