@@ -12,7 +12,6 @@ from src.Authenticate import Authenticate
 from src.Node import Node
 from src.model.Block import Block
 from src.model.Blockchain import Blockchain
-from src.model.bitcop.BitcopMessage import BitcopMessage
 
 # ------------------------------------------------------- VARS ------------------------------------------------------- #
 
