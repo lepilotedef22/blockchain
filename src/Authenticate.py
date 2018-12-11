@@ -14,8 +14,6 @@ __date__ = "30/11/2018"
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from src import AuthenticateRX
-from hashlib import sha256
 from threading import Thread
 
 
@@ -32,23 +30,8 @@ class Authenticate(Thread):
         """
         Constructor of the authenticate server
         """
-
         super().__init__()
-        self.auth_rx = AuthenticateRX("localhost", 4242)  # TODO parse ini to get ip
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
-
-    def run(self) -> None:
-
-        """
-        Overriding the run method of threading. Main loop executed to intercept the authentication requests from
-        the nodes and to manage them.
-        """
-
-        while True:
-
-            print(self.auth_rx.receive())
-            # Main loop of the authentication server
-            # TODO implement the main loop
 
 

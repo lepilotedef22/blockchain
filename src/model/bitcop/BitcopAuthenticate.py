@@ -22,6 +22,8 @@ class BitcopAuthenticate(Bitcop):
                                                         13 : authenticated
     """
 
+    # TODO : improve nonce and response handling (how they are coded and parsed)
+
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,

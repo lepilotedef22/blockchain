@@ -8,7 +8,7 @@ from typing import List, Dict
 
 from threading import Thread
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive
-from socket import socket
+from socket import socket, SHUT_RDWR
 from hashlib import sha256
 from sys import byteorder
 
@@ -33,7 +33,6 @@ class Node(Thread):
         super().__init__()
 
         # Parsing config files
-        # TODO : update network topology according to assignment
         config = parse_config_node(node_idx)
         self.username: str = config['node']['username']
         self.ip: str = config['node']['ip_address']  # Alias loopback address (cf. assignment)
@@ -52,22 +51,20 @@ class Node(Thread):
     def __authenticate(self, snd_socket: socket) -> None:
         """
         Authenticates the node to the authentication center. Once the node is authenticated, its authenticated attribute
-        is switched to True
+        is switched to True. The authentication sequence is based on the challenge-response scheme :
+            1) node sends its user_name to the auth_center to indicate that it wants to be authenticated
+            2) auth_center replies with a Nonce
+            3) node replies with (user_name, sha256(nonce|secret)) with secret the shared secret
+            4) auth_center replies with ok
+        If at any point something goes wrong, each host can send an ABORT message.
         :param snd_socket: the socket used to communicate with the authentication center
         """
-
-        # Communication setup
-
-        auth_server_address = (self.authenticate_ip,
-                               self.port)
 
         # Request
 
         request = BitcopAuthenticate(Bitcop.AUTH_REQ,
                                      self.username)
-        send(snd_socket,
-             auth_server_address,
-             request)
+        send(snd_socket, request)
 
         # Challenge
 
@@ -79,9 +76,7 @@ class Node(Thread):
             # Code does not match that of a challenge
             abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
                                            'abort')
-            send(snd_socket,
-                 auth_server_address,
-                 abort_req)
+            send(snd_socket, abort_req)
             return
 
         elif chal_code == Bitcop.AUTH_ABORT:
@@ -98,9 +93,7 @@ class Node(Thread):
 
         response = BitcopAuthenticate(Bitcop.AUTH_RESP,
                                       resp_data)
-        send(snd_socket,
-             auth_server_address,
-             response)
+        send(snd_socket, response)
 
         # OK
 
@@ -111,7 +104,7 @@ class Node(Thread):
 
             # Node successfully authenticated
             self.authenticated = True  # Stopping the authentication loop
-            print("Node {0} successfully authenticated on the Bitcom network".format(self.username))
+            print("Node {} successfully authenticated on the Bitcom network".format(self.username))
 
         elif ok_code == Bitcop.AUTH_ABORT:
 
@@ -123,9 +116,7 @@ class Node(Thread):
             # Code does not match that of an auth_ok
             abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
                                            'abort')
-            send(snd_socket,
-                 auth_server_address,
-                 abort_req)
+            send(snd_socket, abort_req)
             return
 
     # ----------------------------------------------------- RUN ----------------------------------------------------- #
@@ -136,10 +127,22 @@ class Node(Thread):
             1. tries to be authenticated on the network by the authentication center
         """
 
+        # ---------------------------------------------- AUTHENTICATION ---------------------------------------------- #
+
         with socket() as sock:
+
             # Creating as socket with default mode : IPv4 and TCP
             sock.bind((self.ip, self.port))
+            auth_server_address = (self.authenticate_ip,
+                                   self.port)
+            sock.connect(auth_server_address)
 
             while not self.authenticated:
+
                 # Trying to be authenticated on the network
                 self.__authenticate(sock)
+
+            # Shutting down connection with authenticate center
+
+            sock.shutdown(SHUT_RDWR)  # Flag : no more send or rcv to expect from sock
+            sock.close()
