@@ -14,6 +14,9 @@ from socket import socket
 from src import Bitcop
 
 
+__date__ = "10.12.2018"
+
+
 # ---------------------------------------------------- FUNCTIONS ---------------------------------------------------- #
 
 # TODO : implement send and receive
