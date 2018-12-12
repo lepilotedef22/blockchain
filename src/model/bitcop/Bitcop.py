@@ -4,7 +4,7 @@
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 # Typing
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from abc import ABC, abstractmethod
 
@@ -28,24 +28,24 @@ class Bitcop(ABC):
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CODES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-    DEFAULT = 0  # Message is default
+    DEFAULT: int = 0  # Message is default
 
     # Authentication
 
-    AUTH_REQ = 10  # Message is authenticate request
-    AUTH_CHAL = 11  # Message is authenticate challenge
-    AUTH_RESP = 12  # Message is authenticate response
-    AUTH_OK = 13  # Message is authenticate OK
-    AUTH_ABORT = 14  # Message is abort authentication
+    AUTH_REQ: int = 10  # Message is authenticate request
+    AUTH_CHAL: int = 11  # Message is authenticate challenge
+    AUTH_RESP: int = 12  # Message is authenticate response
+    AUTH_OK: int = 13  # Message is authenticate OK
+    AUTH_ABORT: int = 14  # Message is abort authentication
 
-    AUTH = [AUTH_REQ, AUTH_CHAL, AUTH_RESP, AUTH_OK, AUTH_ABORT]
+    AUTH: List[int] = [AUTH_REQ, AUTH_CHAL, AUTH_RESP, AUTH_OK, AUTH_ABORT]
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CONSTANTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-    HEADER = "bitcop"  # Header of the protocol
-    NUMBER_BYTES_LENGTH = 2  # Number of bytes used to represent the length of the messages
-    NUMBER_BYTES_CODE = 2  # Number of bytes used to represent the code
-    NUMBER_BYTES_NONCE = 16  # Number of bytes of the nonce
+    HEADER: str = "bitcop"  # Header of the protocol
+    NUMBER_BYTES_LENGTH: int = 2  # Number of bytes used to represent the length of the messages
+    NUMBER_BYTES_CODE: int = 2  # Number of bytes used to represent the code
+    NUMBER_BYTES_NONCE: int = 16  # Number of bytes of the nonce
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 

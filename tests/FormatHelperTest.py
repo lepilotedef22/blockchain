@@ -1,12 +1,12 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__date__ = "29/11/2018"
+__date__ = "29.11.2018"
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 from unittest import TestCase, main
-from src import parse_config_node, parse_config_auth_center
+from src import parse_config_node, parse_config_auth_center, Bitcop, BitcopAuthenticate, CodeNotValidException
 
 # ------------------------------------------------------ TESTS ------------------------------------------------------ #
 
@@ -14,7 +14,7 @@ from src import parse_config_node, parse_config_auth_center
 class FormatHelperTest(TestCase):
 
     """
-    This test file assesses the ComHelperModule
+    This test file assesses the FormatHelperModule
     """
 
     def test_node_config_parser(self):

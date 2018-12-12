@@ -5,6 +5,7 @@
 
 from threading import Thread
 
+
 __date__ = "12.12.2018"
 
 
@@ -22,10 +23,10 @@ class Authenticate(Thread):
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self) -> None:
-
         """
         Constructor of the authenticate server
         """
+
         super().__init__()
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
