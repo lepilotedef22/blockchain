@@ -53,7 +53,6 @@ class Bitcop(ABC):
                  code: int,
                  data_rcv: Optional[bytes] = None
                  ) -> None:
-
         """
         Constructor of the class BitcopMessage
         In the subclasses, data needs to be added
