@@ -9,8 +9,6 @@ from src.model.bitcop.Bitcop import Bitcop
 from src.model.bitcop.Exceptions.CodeNotValidException import CodeNotValidException
 from src.model.bitcop.BitcopAuthenticate import BitcopAuthenticate
 from src.model.utils.SocketHelper import *
-from src.model.ClientThread.ClientThread import ClientThread
-from src.model.ClientThread.AuthCenterClientThread import AuthCenterClientThread
 from src.model.Block import Block
 from src.model.Blockchain import Blockchain
 from src.Node import Node

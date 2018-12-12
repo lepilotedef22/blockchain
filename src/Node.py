@@ -52,7 +52,7 @@ class Node(Thread):
     def __authenticate(self, snd_socket: socket) -> None:
         """
         Authenticates the node to the authentication center. Once the node is authenticated, its authenticated attribute
-        is switched to True. The authentication sequence is based on the challenge-response scheme :
+        is switched to True. The authentication sequence is based on the challenge-response scheme:
             1) node sends its user_name to the auth_center to indicate that it wants to be authenticated
             2) auth_center replies with a Nonce
             3) node replies with (user_name, sha256(nonce|secret)) with secret the shared secret
@@ -72,17 +72,17 @@ class Node(Thread):
         auth_challenge = receive(snd_socket)
         chal_code = auth_challenge.get_request()['code']
 
-        if chal_code != Bitcop.AUTH_CHAL:
+        if chal_code == Bitcop.AUTH_ABORT:
+
+            # Server aborted the operation
+            return
+
+        elif chal_code != Bitcop.AUTH_CHAL:
 
             # Code does not match that of a challenge
             abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
                                            'abort')
             send(snd_socket, abort_req)
-            return
-
-        elif chal_code == Bitcop.AUTH_ABORT:
-
-            # Server aborted the operation
             return
 
         nonce = auth_challenge.get_request()['data']

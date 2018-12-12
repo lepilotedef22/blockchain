@@ -3,10 +3,13 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from typing import Dict
+from typing import Dict, Tuple
 from threading import Thread
-from src import parse_config_auth_center, AuthCenterClientThread
+from src import parse_config_auth_center, receive, send, Bitcop, BitcopAuthenticate
 from socket import socket
+from random import getrandbits
+from hashlib import sha256
+from sys import byteorder
 
 
 __date__ = "12.12.2018"
@@ -36,9 +39,62 @@ class Authenticate(Thread):
         conf = parse_config_auth_center()
         self.ip: str = conf['ip_address']
         self.port: int = 5001
-        self.nodes: Dict[str, str] = conf['nodes']
+        self.all_nodes: Dict[str, str] = conf['nodes']
+        self.nodes_to_connect: Dict[str, str] = conf['nodes']
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
+
+    def __authenticate(self,
+                       server_sock: socket,
+                       client_sock: socket,
+                       client_address: Tuple[str, int]
+                       ) -> None:
+        """
+        Authenticates the node to the authentication center. Once the node is authenticated, it is removed from the
+        attribute nodes_to_connect. The authentication sequence is based on the challenge-response scheme:
+            1) node sends its user_name to the auth_center to indicate that it wants to be authenticated
+            2) auth_center replies with a Nonce
+            3) node replies with (user_name, sha256(nonce|secret)) with secret the shared secret
+            4) auth_center replies with ok
+        If at any point something goes wrong, each host can send an ABORT message.
+        :param server_sock: socket of the authenticate server
+        :param client_sock: socket of the node requesting authentication
+        :param client_address: client address: (ip, port)
+        """
+
+        # Request
+
+        auth_req = receive(server_sock)
+        req_code = auth_req.get_request()['code']
+        user_name = auth_req.get_request()['data']
+        node_ip = client_address[0]
+
+        if req_code == Bitcop.AUTH_ABORT:
+
+            # Client aborted the operation
+            return
+
+        elif req_code != Bitcop.AUTH_REQ:
+
+            # Code does not match that of a request
+            abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
+                                           'abort')
+            send(client_sock, abort_req)
+            return
+
+        # Challenge
+
+        nonce: int = getrandbits(8 * Bitcop.NUMBER_BYTES_NONCE)
+        chal_req = BitcopAuthenticate(Bitcop.AUTH_CHAL, nonce)
+        send(server_sock, chal_req)
+
+        # Response
+
+        secret = self.nodes_to_connect[node_ip]
+        hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + secret.encode('latin-1')
+        check = (user_name, sha256(hash_arg).digest())
+
+    # ----------------------------------------------------- RUN ----------------------------------------------------- #
 
     def run(self) -> None:
         """
@@ -60,11 +116,10 @@ class Authenticate(Thread):
                 # Intercepting new client requests
                 node_sock, node_address = auth_server.accept()
 
-                # Creating the handling thread
-                auth_client_thread = AuthCenterClientThread(auth_server,
-                                                            node_sock,
-                                                            node_address)
+                # Creating the thread handling the client socket
+                client_thread = Thread(target=self.__authenticate, args=[auth_server,
+                                                                         node_sock,
+                                                                         node_address])
+
                 # Starting the thread
-                auth_client_thread.start()
-
-
+                client_thread.start()

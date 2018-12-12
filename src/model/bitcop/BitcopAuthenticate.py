@@ -28,7 +28,7 @@ class BitcopAuthenticate(Bitcop):
 
     def __init__(self,
                  code: Optional[int] = None,
-                 data: Optional[Union[str, int, Tuple[str, hash]]] = "ok",
+                 data: Optional[Union[str, int, Tuple[str, bytes]]] = "ok",
                  data_rcv: Optional[bytes] = None
                  ) -> None:
 

@@ -96,6 +96,8 @@ def parse_bytes_stream_from_message(msg: bytes,
                             "Data": Data}
     """
 
+    # TODO: switch data structure to json (prevent conversion bug for int, hashes,...)
+
     code = int.from_bytes(msg[len(header) + length_bytes:
                               len(header) + length_bytes + code_bytes],
                           byteorder)
