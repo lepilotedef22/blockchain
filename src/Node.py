@@ -40,7 +40,8 @@ class Node(Thread):
         self.secret: str = config['registration']['secret']
         self.neighbours_ip: List[str] = config['neighbours']
 
-        self.port: int = 5001  # Arbitrary, given in the assignment
+        self.server_port: int = 5001  # Arbitrary, given in the assignment
+        self.authenticate_port = 5002  # Arbitrary
         self.connected_neighbours: Dict[str, socket] = {}  # Storing the connected neighbours to allow the
         # communication: {ip: socket}
         self.blockchain: Blockchain = Blockchain()
@@ -129,20 +130,20 @@ class Node(Thread):
 
         # ---------------------------------------------- AUTHENTICATION ---------------------------------------------- #
 
-        with socket() as sock:
+        with socket() as auth_client:
 
             # Creating as socket with default mode : IPv4 and TCP
-            sock.bind((self.ip, self.port))
+            auth_client.bind((self.ip, self.authenticate_port))
             auth_server_address = (self.authenticate_ip,
-                                   self.port)
-            sock.connect(auth_server_address)
+                                   self.server_port)
+            auth_client.connect(auth_server_address)
 
             while not self.authenticated:
 
                 # Trying to be authenticated on the network
-                self.__authenticate(sock)
+                self.__authenticate(auth_client)
 
             # Shutting down connection with authenticate center
 
-            sock.shutdown(SHUT_RDWR)  # Flag : no more send or rcv to expect from sock
-            sock.close()
+            auth_client.shutdown(SHUT_RDWR)  # Flag : no more send or rcv to expect from auth_client
+            auth_client.close()
