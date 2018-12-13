@@ -1,5 +1,5 @@
 # !/usr/bin/env python3
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
 
 __date__ = "27.11.2018"
 
@@ -80,7 +80,6 @@ def parse_config_auth_center() -> Dict:
 
 
 def parse_bytes_stream_from_message(msg: bytes,
-                                    header: str,
                                     length_bytes: int,
                                     code_bytes: int
                                     ) -> Dict:
@@ -88,8 +87,7 @@ def parse_bytes_stream_from_message(msg: bytes,
     """
     Returns the information contained in the message bytes as a dictionary
     :param msg: Bytes given in the format defined in the Bitcop protocol :
-        "Bitcop" | Length | Code | Data
-    :param header: header of the protocol
+        Length | Code | Data
     :param length_bytes: number of bytes used to represent the length of the message
     :param code_bytes: number of bytes used to represent the message codes
     :return: A dictionary : {"Code": Code,
@@ -98,10 +96,10 @@ def parse_bytes_stream_from_message(msg: bytes,
 
     # TODO: switch data structure to json (prevent conversion bug for int, hashes,...)
 
-    code = int.from_bytes(msg[len(header) + length_bytes:
-                              len(header) + length_bytes + code_bytes],
+    code = int.from_bytes(msg[length_bytes:
+                              length_bytes + code_bytes],
                           byteorder)
-    data = msg[len(header) + length_bytes + code_bytes:].decode('latin-1')
+    data = msg[length_bytes + code_bytes:].decode('utf-8')
 
     return {"code": code,
             "data": data}

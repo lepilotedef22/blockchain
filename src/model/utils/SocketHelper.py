@@ -54,11 +54,11 @@ def receive(rcv_socket: socket
 
     chunks = []
     bytes_rcvd = 0
-    number_of_first_bytes = len(Bitcop.HEADER) + Bitcop.NUMBER_BYTES_LENGTH
+    number_of_first_bytes = Bitcop.NUMBER_BYTES_LENGTH
     first_chunk = rcv_socket.recv(number_of_first_bytes)
     bytes_rcvd += number_of_first_bytes
     chunks.append(first_chunk)
-    length = int.from_bytes(first_chunk[len(Bitcop.HEADER):], byteorder)
+    length = int.from_bytes(first_chunk, byteorder)
 
     while bytes_rcvd < length:
 
@@ -74,8 +74,8 @@ def receive(rcv_socket: socket
 
     # Parsing the Bitcop code of the message
 
-    code_bytes = data[len(Bitcop.HEADER) + Bitcop.NUMBER_BYTES_LENGTH:
-                      len(Bitcop.HEADER) + Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE]
+    code_bytes = data[Bitcop.NUMBER_BYTES_LENGTH:
+                      Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE]
     code = int.from_bytes(code_bytes, byteorder)
 
     if code // 10 == 1:

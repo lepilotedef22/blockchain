@@ -89,8 +89,8 @@ class Node(Thread):
 
         # Response
 
-        hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + self.secret.encode('latin-1')
-        resp_data = (self.username, sha256(hash_arg))
+        hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + self.secret.encode('utf-8')
+        resp_data = [self.username, sha256(hash_arg).hexdigest()]
 
         response = BitcopAuthenticate(Bitcop.AUTH_RESP,
                                       resp_data)

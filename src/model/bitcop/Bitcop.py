@@ -19,7 +19,7 @@ class Bitcop(ABC):
     relative to each type of message supported by the protocol. It will be inherited to differentiate different kinds of
     messages. Terminology :  new message refers to an object containing the data of a message about meant to be sent in
     the near future. Byte stream refers to an object created based on a previously received message.
-    Bitcop protocol : "header" = "bitcop" | Length | Code | Data
+    Bitcop protocol : Length | Code | Data
     The length of the messages are not hardcoded, the number of bytes on which the total length of the message and the
     code of the message are coded are class constants, and therefore not hardcoded either
     """
@@ -42,7 +42,6 @@ class Bitcop(ABC):
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CONSTANTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-    HEADER: str = "bitcop"  # Header of the protocol
     NUMBER_BYTES_LENGTH: int = 2  # Number of bytes used to represent the length of the messages
     NUMBER_BYTES_CODE: int = 2  # Number of bytes used to represent the code
     NUMBER_BYTES_NONCE: int = 16  # Number of bytes of the nonce

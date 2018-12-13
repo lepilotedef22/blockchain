@@ -4,10 +4,11 @@
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 # Typing
-from typing import Optional, Union, Tuple, Dict
+from typing import Optional, Union, List, Dict
 
 from src import Bitcop, CodeNotValidException, parse_bytes_stream_from_message
 from sys import byteorder
+from json import dumps, loads
 
 
 __date__ = "10.12.2018"
@@ -22,13 +23,11 @@ class BitcopAuthenticate(Bitcop):
                                                         13 : authenticated
     """
 
-    # TODO : improve nonce and response handling (how they are coded and parsed)
-
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
                  code: Optional[int] = None,
-                 data: Optional[Union[str, int, Tuple[str, bytes]]] = "ok",
+                 data: Optional[Union[str, int, List[str, str]]] = "ok",
                  data_rcv: Optional[bytes] = None
                  ) -> None:
 
@@ -55,7 +54,6 @@ class BitcopAuthenticate(Bitcop):
 
             # Message created from a RX request -> code and data are assumed to be None
             parsed_msg = parse_bytes_stream_from_message(data_rcv,
-                                                         Bitcop.HEADER,
                                                          Bitcop.NUMBER_BYTES_LENGTH,
                                                          Bitcop.NUMBER_BYTES_CODE)
 
@@ -68,19 +66,7 @@ class BitcopAuthenticate(Bitcop):
 
             super().__init__(code, data_rcv)
 
-            if code == Bitcop.AUTH_RESP:
-
-                # Response in the challenge-response scheme
-                self.data = tuple(parsed_msg['data'].split(','))
-
-            elif code == Bitcop.AUTH_CHAL:
-
-                # Challenge in the challenge-response scheme
-                self.data = int.from_bytes(parsed_msg['data'].encode('latin-1'), byteorder)
-
-            else:
-
-                self.data = parsed_msg['data']
+            self.data = loads(parsed_msg['data'])
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
@@ -94,27 +80,12 @@ class BitcopAuthenticate(Bitcop):
         if self.data_rcv is None:
 
             # New message to be sent
-            if self.code == Bitcop.AUTH_RESP:
-
-                # Message is a response in the challenge-response scheme
-                data_str = "{0},{1}".format(self.data[0], self.data[1].digest())
-                data = data_str.encode('latin-1')
-
-            elif self.code == Bitcop.AUTH_CHAL:
-
-                # Message is a challenge in the challenge-response scheme
-                data = self.data.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder)
-
-            else:
-
-                # Any other kind of authenticate message
-                data = self.data.encode('latin-1')
-
-            length = len(Bitcop.HEADER) + Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE + len(data)
+            data = dumps(self.data).encode('utf-8')
+            length = Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE + len(data)
             length_bytes = length.to_bytes(Bitcop.NUMBER_BYTES_LENGTH, byteorder)
             code_bytes = self.code.to_bytes(Bitcop.NUMBER_BYTES_CODE, byteorder)
 
-            return Bitcop.HEADER.encode('latin-1') + length_bytes + code_bytes + data
+            return length_bytes + code_bytes + data
 
         else:
 
