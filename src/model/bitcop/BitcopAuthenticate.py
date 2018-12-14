@@ -27,10 +27,9 @@ class BitcopAuthenticate(Bitcop):
 
     def __init__(self,
                  code: Optional[int] = None,
-                 data: Optional[Union[str, int, List[str, str]]] = "ok",
+                 data: Optional[Union[str, int, List[str]]] = "ok",
                  data_rcv: Optional[bytes] = None
                  ) -> None:
-
         """
         Constructor of the BitcopAuthenticate
         :param code: code of the message sent in the Bitcop protocol, None if the object is based on an incoming stream

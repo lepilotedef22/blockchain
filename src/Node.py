@@ -11,6 +11,7 @@ from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send,
 from socket import socket, SHUT_RDWR
 from hashlib import sha256
 from sys import byteorder
+from time import sleep
 
 __date__ = "07.12.2018"
 
@@ -133,10 +134,19 @@ class Node(Thread):
         with socket() as auth_client:
 
             # Creating as socket with default mode : IPv4 and TCP
-            auth_client.bind((self.ip, self.authenticate_port))
-            auth_server_address = (self.authenticate_ip,
-                                   self.server_port)
-            auth_client.connect(auth_server_address)
+            is_bound = False
+            while not is_bound:
+
+                try:
+                    auth_client.bind((self.ip, self.authenticate_port))
+                    auth_server_address = (self.authenticate_ip,
+                                           self.server_port)
+                    auth_client.connect(auth_server_address)
+                    is_bound = True
+
+                except OSError:
+                    print("Address {0}:{1} already used".format(self.ip, self.authenticate_port))
+                    sleep(1)  # Waiting one second before attempting to bind again
 
             while not self.authenticated:
 
@@ -145,5 +155,21 @@ class Node(Thread):
 
             # Shutting down connection with authenticate center
 
-            auth_client.shutdown(SHUT_RDWR)  # Flag : no more send or rcv to expect from auth_client
-            auth_client.close()
+            try:
+
+                auth_client.shutdown(SHUT_RDWR)  # Flag : no more send or rcv to expect from auth_client
+                auth_client.close()
+                print("Socket at {0}:{1} closed".format(self.ip, self.authenticate_port))
+
+            except OSError:
+
+                print("Socket at {0}:{1} already closed".format(self.ip, self.authenticate_port))
+
+
+# ------------------------------------------------------- MAIN ------------------------------------------------------- #
+
+if __name__ == "__main":
+
+    idx = int(input("Insert node index: "))
+    node = Node(idx)
+    node.start()

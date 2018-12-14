@@ -38,7 +38,17 @@ def parse_config_node(index: int) -> Dict:
     # Finding the path to config file
 
     file_name = "host_{}.ini".format(index)
-    blockchain_path = Path.cwd().parent
+    pwd = Path.cwd()
+    if 'blockchain' == str(pwd).split('/')[-1]:
+
+        # pwd is blockchain
+        blockchain_path = pwd
+
+    else:
+
+        # pwd is blockchain/src
+        blockchain_path = pwd.parent
+
     conf_path = blockchain_path / "config" / file_name
 
     # Opening and reading the file
@@ -63,7 +73,17 @@ def parse_config_auth_center() -> Dict:
     # Finding the path of config file
 
     file_name = "authenticate.ini"
-    blockchain_path = Path.cwd().parent
+    pwd = Path.cwd()
+    if 'blockchain' == str(pwd).split('/')[-1]:
+
+        # pwd is blockchain
+        blockchain_path = pwd
+
+    else:
+
+        # pwd is blockchain/src
+        blockchain_path = pwd.parent
+
     conf_path = blockchain_path / "config" / file_name
 
     # Opening and reading the file

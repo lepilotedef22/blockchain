@@ -10,13 +10,13 @@ from socket import socket
 from random import getrandbits
 from hashlib import sha256
 from sys import byteorder
+from time import sleep
 
 
 __date__ = "12.12.2018"
 
 
 class Authenticate(Thread):
-
     """
     This class handles the authentication of the nodes on the Bitcom network. The authentication process is based on the
     challenge-response scheme : 1) node requests a authentication by sending its user_name
@@ -45,7 +45,6 @@ class Authenticate(Thread):
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
     def __authenticate(self,
-                       server_sock: socket,
                        client_sock: socket,
                        client_address: Tuple[str, int]
                        ) -> None:
@@ -57,14 +56,13 @@ class Authenticate(Thread):
             3) node replies with [user_name, sha256(nonce|secret)] with secret the shared secret
             4) auth_center replies with ok
         If at any point something goes wrong, each host can send an ABORT message.
-        :param server_sock: socket of the authenticate server
         :param client_sock: socket of the node requesting authentication
         :param client_address: client address: (ip, port)
         """
 
         # Request
 
-        auth_req = receive(server_sock)
+        auth_req = receive(client_sock)
         req_code = auth_req.get_request()['code']
         user_name = auth_req.get_request()['data']
         node_ip = client_address[0]
@@ -86,7 +84,7 @@ class Authenticate(Thread):
 
         nonce: int = getrandbits(8 * Bitcop.NUMBER_BYTES_NONCE)
         chal_req = BitcopAuthenticate(Bitcop.AUTH_CHAL, nonce)
-        send(server_sock, chal_req)
+        send(client_sock, chal_req)
 
         # Response
 
@@ -95,7 +93,7 @@ class Authenticate(Thread):
         expected_hash = sha256(hash_arg).hexdigest()
         expected_response = [user_name, expected_hash]
 
-        auth_resp = receive(server_sock)
+        auth_resp = receive(client_sock)
         resp_code = auth_resp.get_request()['code']
         response = auth_resp.get_request()['data']
 
@@ -145,6 +143,8 @@ class Authenticate(Thread):
             auth_server_address = (self.ip, self.port)
             auth_server.bind(auth_server_address)
             auth_server.listen(5)  # Queue up to 5 client sockets
+            print("Authentication server listening at {0}:{1}\n".format(self.ip,
+                                                                        self.port))
 
             # ---------------------------------------------- MAIN LOOP ---------------------------------------------- #
 
@@ -161,8 +161,7 @@ class Authenticate(Thread):
                     # Node sending the request is eligible for an authentication
 
                     # Creating the thread handling the client socket
-                    client_thread = Thread(target=self.__authenticate, args=[auth_server,
-                                                                             node_sock,
+                    client_thread = Thread(target=self.__authenticate, args=[node_sock,
                                                                              node_address])
 
                     # Starting the thread
@@ -174,3 +173,13 @@ class Authenticate(Thread):
                     abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
                                                    'abort')
                     send(node_sock, abort_req)
+
+                sleep(0.01)
+
+# ------------------------------------------------------- MAIN ------------------------------------------------------- #
+
+
+if __name__ == "__main__":
+
+    auth = Authenticate()
+    auth.start()

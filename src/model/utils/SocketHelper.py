@@ -17,13 +17,13 @@ __date__ = "10.12.2018"
 
 # ---------------------------------------------------- FUNCTIONS ---------------------------------------------------- #
 
-def send(snd_socket: socket,
+def send(sock: socket,
          request: Bitcop
          ) -> None:
     """
     Function used to send the data in request through the socket snd_socket
     Credit: https://docs.python.org/3/howto/sockets.html
-    :param snd_socket: socket used to send the data
+    :param sock: socket used to send the data
     :param request: data to be sent
     """
 
@@ -33,7 +33,7 @@ def send(snd_socket: socket,
 
     while total_sent < length:
 
-        sent = snd_socket.send(data)  # sent saves the number of bytes sent
+        sent = sock.send(data)  # sent saves the number of bytes sent
         if sent == 0:
 
             raise RuntimeError("Socket connection broken in send")
@@ -41,12 +41,12 @@ def send(snd_socket: socket,
         total_sent += sent
 
 
-def receive(rcv_socket: socket
+def receive(sock: socket
             ) -> Bitcop:
     """
     Function used to get the data received through the socket rcv_socket
     Credit: https://docs.python.org/3/howto/sockets.html
-    :param rcv_socket: socket from which the data is received
+    :param sock: socket from which the data is received
     :return: Bitcop message containing the information
     """
 
@@ -55,14 +55,14 @@ def receive(rcv_socket: socket
     chunks = []
     bytes_rcvd = 0
     number_of_first_bytes = Bitcop.NUMBER_BYTES_LENGTH
-    first_chunk = rcv_socket.recv(number_of_first_bytes)
+    first_chunk = sock.recv(number_of_first_bytes)
     bytes_rcvd += number_of_first_bytes
     chunks.append(first_chunk)
     length = int.from_bytes(first_chunk, byteorder)
 
     while bytes_rcvd < length:
 
-        chunk = rcv_socket.recv(min(length - bytes_rcvd, 1024))
+        chunk = sock.recv(min(length - bytes_rcvd, 1024))
         if chunk == b'':
 
             raise RuntimeError("Socket connection broken in receive")
