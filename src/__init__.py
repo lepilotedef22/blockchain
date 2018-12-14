@@ -3,15 +3,16 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from src.model.RX import RX
-from src.model.AuthenticateRX import AuthenticateRX
-from src.model.ComHelper import *
-from src.model.TX import TX
+from src.model.utils.FormatHelper import *
 from src.model.Exceptions.BlockNotValidException import BlockNotValidException
-from src.Authenticate import Authenticate
-from src.Node import Node
+from src.model.bitcop.Bitcop import Bitcop
+from src.model.bitcop.Exceptions.CodeNotValidException import CodeNotValidException
+from src.model.bitcop.BitcopAuthenticate import BitcopAuthenticate
+from src.model.utils.SocketHelper import *
 from src.model.Block import Block
 from src.model.Blockchain import Blockchain
+from src.Node import Node
+from src.Authenticate import Authenticate
 
 # ------------------------------------------------------- VARS ------------------------------------------------------- #
 

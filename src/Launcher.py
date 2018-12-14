@@ -1,20 +1,34 @@
-from src.model.RX import RX
-from src.model.TX import TX
-import threading
-from src import Authenticate
-from src import Node
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
+
+from src import Node, Authenticate
+
+
+__date__ = "14.12.2018"
 
 
 class Launcher:
+    """
+    This class starts the nodes and the authenticate center
+    """
 
-    def __init__(self):
-        # Not working
-        print("New simulation started")
+    # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
+
+    def __init__(self) -> None:
+        """
+        Constructor of the launcher
+        """
+
+        self.nodes = [Node(i) for i in range(1, 7)]
         self.auth = Authenticate()
-        self.node = Node()
 
 
 if __name__ == "__main__":
+
     launcher = Launcher()
     launcher.auth.start()
-    launcher.node.start()
+    for node in launcher.nodes:
+
+        node.start()
