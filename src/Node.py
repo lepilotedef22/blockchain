@@ -168,7 +168,7 @@ class Node(Thread):
 
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
 
-if __name__ == "__main":
+if __name__ == "__main__":
 
     idx = int(input("Insert node index: "))
     node = Node(idx)
