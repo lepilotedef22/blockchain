@@ -85,7 +85,7 @@ def parse_bytes_stream_from_message(msg: bytes,
                                     ) -> Dict:
 
     """
-    Returns the information contained in the message bytes as a dictionary
+    Decapsulates the information contained in the message bytes as a dictionary
     :param msg: Bytes given in the format defined in the Bitcop protocol :
         Length | Code | Data
     :param length_bytes: number of bytes used to represent the length of the message
@@ -94,12 +94,10 @@ def parse_bytes_stream_from_message(msg: bytes,
                             "Data": Data}
     """
 
-    # TODO: switch data structure to json (prevent conversion bug for int, hashes,...)
-
     code = int.from_bytes(msg[length_bytes:
                               length_bytes + code_bytes],
                           byteorder)
-    data = msg[length_bytes + code_bytes:].decode('utf-8')
+    data = msg[length_bytes + code_bytes:]
 
     return {"code": code,
             "data": data}
