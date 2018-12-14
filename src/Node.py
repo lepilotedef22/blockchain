@@ -4,7 +4,7 @@
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 # Typing
-from typing import List, Dict
+from typing import List
 
 from threading import Thread
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive
@@ -43,14 +43,15 @@ class Node(Thread):
 
         self.server_port: int = 5001  # Arbitrary, given in the assignment
         self.authenticate_port = 5002  # Arbitrary
-        self.connected_neighbours: Dict[str, socket] = {}  # Storing the connected neighbours to allow the
-        # communication: {ip: socket}
+        self.online_neighbours: List[str] = []  # Storing the connected neighbours to allow the transmission
         self.blockchain: Blockchain = Blockchain()
         self.authenticated: bool = False  # Authenticated to the network ?
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
-    def __authenticate(self, snd_socket: socket) -> None:
+    def __authenticate(self,
+                       snd_socket: socket
+                       ) -> None:
         """
         Authenticates the node to the authentication center. Once the node is authenticated, its authenticated attribute
         is switched to True. The authentication sequence is based on the challenge-response scheme:
@@ -121,19 +122,28 @@ class Node(Thread):
             send(snd_socket, abort_req)
             return
 
+    def __serve_forever(self,
+                        server_socket: socket
+                        ) -> None:
+        """
+        Method running in the server thread.
+        :param server_socket: socket receiving the requests
+        """
+
     # ----------------------------------------------------- RUN ----------------------------------------------------- #
 
     def run(self) -> None:
         """
         Main method of the Node thread :
             1. tries to be authenticated on the network by the authentication center
+            2. starts the server
         """
 
-        # ---------------------------------------------- AUTHENTICATION ---------------------------------------------- #
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ AUTHENTICATION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
         with socket() as auth_client:
 
-            # Creating as socket with default mode : IPv4 and TCP
+            # Creating a socket with default mode: IPv4/TCP
             is_bound = False
             while not is_bound:
 
@@ -163,7 +173,28 @@ class Node(Thread):
 
             except OSError:
 
-                print("Socket at {0}:{1} already closed".format(self.ip, self.authenticate_port))
+                print("Socket at {0}:{1} not closed properly".format(self.ip, self.authenticate_port))
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SERVER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+        with socket() as node_server:
+
+            # Creating a socket with default mode: IPv4/TCP
+            is_bound = False
+            while not is_bound:
+
+                try:
+                    node_server.bind((self.ip, self.server_port))
+                    is_bound = True
+
+                except OSError:
+                    print("Address {0}:{1} already used".format(self.ip, self.authenticate_port))
+                    sleep(1)  # Waiting one second before attempting to bind again
+
+            # Creating and starting the server thread
+            server_thread = Thread(target=self.__serve_forever,
+                                   args=node_server)
+            server_thread.start()
 
 
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
