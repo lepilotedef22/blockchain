@@ -10,7 +10,7 @@ from threading import Thread
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive
 from socket import socket, SHUT_RDWR
 from hashlib import sha256
-from sys import byteorder
+from sys import byteorder, argv
 from time import sleep
 
 __date__ = "07.12.2018"
@@ -144,19 +144,27 @@ class Node(Thread):
         with socket() as auth_client:
 
             # Creating a socket with default mode: IPv4/TCP
-            is_bound = False
+            is_bound = False,
+            auth_server_address = (self.authenticate_ip,
+                                   self.server_port)
             while not is_bound:
 
                 try:
                     auth_client.bind((self.ip, self.authenticate_port))
-                    auth_server_address = (self.authenticate_ip,
-                                           self.server_port)
-                    auth_client.connect(auth_server_address)
                     is_bound = True
 
                 except OSError:
                     print("Address {0}:{1} already used".format(self.ip, self.authenticate_port))
                     sleep(1)  # Waiting one second before attempting to bind again
+
+            try:
+                auth_client.connect(auth_server_address)
+
+            except OSError:
+                print("Cannot connect to Authenticate server at {0}:{1}".format(self.authenticate_ip,
+                                                                                self.server_port))
+                print("Please retry later...")
+                return
 
             while not self.authenticated:
 
@@ -193,7 +201,7 @@ class Node(Thread):
 
             # Creating and starting the server thread
             server_thread = Thread(target=self.__serve_forever,
-                                   args=node_server)
+                                   args=[node_server])
             server_thread.start()
 
 
@@ -201,6 +209,15 @@ class Node(Thread):
 
 if __name__ == "__main__":
 
-    idx = int(input("Insert node index: "))
+    if len(argv) == 1:
+
+        # No argument passed to Node
+        idx = int(input("Insert node index: "))
+
+    else:
+
+        # Arguments passed to node, first one is Node number
+        idx = int(argv[1])
+
     node = Node(idx)
     node.start()

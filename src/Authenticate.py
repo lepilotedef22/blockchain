@@ -141,7 +141,18 @@ class Authenticate(Thread):
 
             # Setting up connection
             auth_server_address = (self.ip, self.port)
-            auth_server.bind(auth_server_address)
+            is_bound = False
+
+            while not is_bound:
+
+                try:
+                    auth_server.bind((self.ip, self.port))
+                    is_bound = True
+
+                except OSError:
+                    print("Address {0}:{1} already used".format(self.ip, self.port))
+                    sleep(1)  # Waiting one second before attempting to bind again
+
             auth_server.listen(5)  # Queue up to 5 client sockets
             print("Authentication server listening at {0}:{1}\n".format(self.ip,
                                                                         self.port))
