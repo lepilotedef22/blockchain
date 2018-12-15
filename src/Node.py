@@ -63,63 +63,70 @@ class Node(Thread):
         :param snd_socket: the socket used to communicate with the authentication center
         """
 
-        # Request
+        try:
 
-        request = BitcopAuthenticate(Bitcop.AUTH_REQ,
-                                     self.username)
-        send(snd_socket, request)
+            # Request
 
-        # Challenge
+            request = BitcopAuthenticate(Bitcop.AUTH_REQ,
+                                         self.username)
+            send(snd_socket, request)
 
-        auth_challenge = receive(snd_socket)
-        chal_code = auth_challenge.get_request()['code']
+            # Challenge
 
-        if chal_code == Bitcop.AUTH_ABORT:
+            auth_challenge = receive(snd_socket)
+            chal_code = auth_challenge.get_request()['code']
 
-            # Server aborted the operation
-            return
+            if chal_code == Bitcop.AUTH_ABORT:
 
-        elif chal_code != Bitcop.AUTH_CHAL:
+                # Server aborted the operation
+                return
 
-            # Code does not match that of a challenge
-            abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
-                                           'abort')
-            send(snd_socket, abort_req)
-            return
+            elif chal_code != Bitcop.AUTH_CHAL:
 
-        nonce = auth_challenge.get_request()['data']
+                # Code does not match that of a challenge
+                abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
+                                               'abort')
+                send(snd_socket, abort_req)
+                return
 
-        # Response
+            nonce = auth_challenge.get_request()['data']
 
-        hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + self.secret.encode('utf-8')
-        resp_data = [self.username, sha256(hash_arg).hexdigest()]
+            # Response
 
-        response = BitcopAuthenticate(Bitcop.AUTH_RESP,
-                                      resp_data)
-        send(snd_socket, response)
+            hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + self.secret.encode('utf-8')
+            resp_data = [self.username, sha256(hash_arg).hexdigest()]
 
-        # OK
+            response = BitcopAuthenticate(Bitcop.AUTH_RESP,
+                                          resp_data)
+            send(snd_socket, response)
 
-        auth_ok = receive(snd_socket)
-        ok_code = auth_ok.get_request()['code']
+            # OK
 
-        if ok_code == Bitcop.AUTH_OK:
+            auth_ok = receive(snd_socket)
+            ok_code = auth_ok.get_request()['code']
 
-            # Node successfully authenticated
-            self.authenticated = True  # Stopping the authentication loop
-            print("Node {} successfully authenticated on the Bitcom network".format(self.username))
+            if ok_code == Bitcop.AUTH_OK:
 
-        elif ok_code == Bitcop.AUTH_ABORT:
+                # Node successfully authenticated
+                self.authenticated = True  # Stopping the authentication loop
+                print("Node {} successfully authenticated on the Bitcom network".format(self.username))
 
-            # Server aborted the operation
-            return
+            elif ok_code == Bitcop.AUTH_ABORT:
 
-        else:
+                # Server aborted the operation
+                return
 
-            # Code does not match that of an auth_ok
-            abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
-                                           'abort')
-            send(snd_socket, abort_req)
+            else:
+
+                # Code does not match that of an auth_ok
+                abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
+                                               'abort')
+                send(snd_socket, abort_req)
+                return
+
+        except RuntimeError:
+            print("Socket communication broken at node {0}:{1}".format(self.ip,
+                                                                       self.authenticate_ip))
             return
 
     def __serve_forever(self,

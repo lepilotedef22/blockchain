@@ -60,74 +60,80 @@ class Authenticate(Thread):
         :param client_address: client address: (ip, port)
         """
 
-        # Request
+        try:
 
-        auth_req = receive(client_sock)
-        req_code = auth_req.get_request()['code']
-        user_name = auth_req.get_request()['data']
-        node_ip = client_address[0]
+            # Request
 
-        if req_code == Bitcop.AUTH_ABORT:
+            auth_req = receive(client_sock)
+            req_code = auth_req.get_request()['code']
+            user_name = auth_req.get_request()['data']
+            node_ip = client_address[0]
 
-            # Client aborted the operation
-            return
+            if req_code == Bitcop.AUTH_ABORT:
 
-        elif req_code != Bitcop.AUTH_REQ:
-
-            # Code does not match that of a request
-            abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
-                                           'abort')
-            send(client_sock, abort_req)
-            return
-
-        # Challenge
-
-        nonce: int = getrandbits(8 * Bitcop.NUMBER_BYTES_NONCE)
-        chal_req = BitcopAuthenticate(Bitcop.AUTH_CHAL, nonce)
-        send(client_sock, chal_req)
-
-        # Response
-
-        secret = self.all_nodes[node_ip]
-        hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + secret.encode('utf-8')
-        expected_hash = sha256(hash_arg).hexdigest()
-        expected_response = [user_name, expected_hash]
-
-        auth_resp = receive(client_sock)
-        resp_code = auth_resp.get_request()['code']
-        response = auth_resp.get_request()['data']
-
-        if resp_code == Bitcop.AUTH_ABORT:
-
-            # Client aborted the operation
-            return
-
-        elif resp_code == Bitcop.AUTH_RESP:
-
-            # Code matches that of a response
-            if response == expected_response:
-
-                # Correct response, node can be authenticated
-                auth_ok = BitcopAuthenticate(Bitcop.AUTH_OK)
-                send(client_sock, auth_ok)
-                print("Server successfully authenticated node at {}".format(client_address[0]))
+                # Client aborted the operation
                 return
 
-            else:
+            elif req_code != Bitcop.AUTH_REQ:
 
-                # Wrong response, aborting operation
+                # Code does not match that of a request
                 abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
                                                'abort')
                 send(client_sock, abort_req)
                 return
 
-        else:
+            # Challenge
 
-            # Code does not match that of a response
-            abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
-                                           'abort')
-            send(client_sock, abort_req)
-            return
+            nonce: int = getrandbits(8 * Bitcop.NUMBER_BYTES_NONCE)
+            chal_req = BitcopAuthenticate(Bitcop.AUTH_CHAL, nonce)
+            send(client_sock, chal_req)
+
+            # Response
+
+            secret = self.all_nodes[node_ip]
+            hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + secret.encode('utf-8')
+            expected_hash = sha256(hash_arg).hexdigest()
+            expected_response = [user_name, expected_hash]
+
+            auth_resp = receive(client_sock)
+            resp_code = auth_resp.get_request()['code']
+            response = auth_resp.get_request()['data']
+
+            if resp_code == Bitcop.AUTH_ABORT:
+
+                # Client aborted the operation
+                return
+
+            elif resp_code == Bitcop.AUTH_RESP:
+
+                # Code matches that of a response
+                if response == expected_response:
+
+                    # Correct response, node can be authenticated
+                    auth_ok = BitcopAuthenticate(Bitcop.AUTH_OK)
+                    send(client_sock, auth_ok)
+                    print("Server successfully authenticated node at {}".format(client_address[0]))
+                    return
+
+                else:
+
+                    # Wrong response, aborting operation
+                    abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
+                                                   'abort')
+                    send(client_sock, abort_req)
+                    return
+
+            else:
+
+                # Code does not match that of a response
+                abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
+                                               'abort')
+                send(client_sock, abort_req)
+                return
+
+        except RuntimeError:
+            print("Socket communication broken with node at {0}:{1}".format(client_address[0],
+                                                                            client_address[0]))
 
     # ----------------------------------------------------- RUN ----------------------------------------------------- #
 
@@ -141,7 +147,18 @@ class Authenticate(Thread):
 
             # Setting up connection
             auth_server_address = (self.ip, self.port)
-            auth_server.bind(auth_server_address)
+            is_bound = False
+
+            while not is_bound:
+
+                try:
+                    auth_server.bind(auth_server_address)
+                    is_bound = True
+
+                except OSError:
+                    print("Address {0}:{1} already used".format(self.ip, self.port))
+                    sleep(1)  # Waiting one second before attempting to bind again
+
             auth_server.listen(5)  # Queue up to 5 client sockets
             print("Authentication server listening at {0}:{1}\n".format(self.ip,
                                                                         self.port))
