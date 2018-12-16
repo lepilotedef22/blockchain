@@ -154,27 +154,22 @@ class Node(Thread):
             is_bound = False
             auth_server_address = (self.authenticate_ip,
                                    self.server_port)
+            auth_client_address = None
             while not is_bound:
 
                 try:
-                    auth_client.bind((self.ip, self.authenticate_port))
+                    auth_client.bind((self.ip, 0))  # OS takes care of free port allocation
+                    auth_client.connect(auth_server_address)
+                    auth_client_address = auth_client.getsockname()
                     is_bound = True
 
                 except OSError:
-                    print("Address {0}:{1} already used".format(self.ip, self.authenticate_port))
-                    sleep(1)  # Waiting one second before attempting to bind again
-
-                try:
-
-                    auth_client.connect(auth_server_address)
-
-                except OSError:
-                    print("Server at {0}:{1} cannot be reached")
+                    print("Server at {0}:{1} cannot be reached".format(self.authenticate_ip,
+                                                                       self.server_port))
                     print("Please try again later...")
                     return
 
             while not self.authenticated:
-
                 # Trying to be authenticated on the network
                 self.__authenticate(auth_client)
 
@@ -182,13 +177,15 @@ class Node(Thread):
 
             try:
 
-                auth_client.shutdown(SHUT_RDWR)  # Flag : no more send or rcv to expect from auth_client
+                auth_client.shutdown(SHUT_RDWR)  # Flag: no more send or rcv to expect from auth_client
                 auth_client.close()
-                print("Socket at {0}:{1} closed".format(self.ip, self.authenticate_port))
+                print("Socket at {0}:{1} closed".format(auth_client_address[0],
+                                                        auth_client_address[1]))
 
             except OSError:
 
-                print("Socket at {0}:{1} not closed properly".format(self.ip, self.authenticate_port))
+                print("Socket at {0}:{1} not closed properly".format(auth_client_address[0],
+                                                                     auth_client_address[1]))
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SERVER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
