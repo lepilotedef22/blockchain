@@ -20,21 +20,21 @@ class NodeShell(Cmd):
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
-                 node: Node
+                 n: Node
                  ) -> None:
         """
         Constructor of the NodeShell
-        :param node: node controlled by this NodeShell
+        :param n: node controlled by this NodeShell
         """
 
         super().__init__('tab',
                          None,
                          None)
-        self.node = node
+        self.node = n
         self.intro = (
-            "\n--------------------------------------------------------\n"
-            "------------------------ BITCOM ------------------------\n"
-            "--------------------------------------------------------"
+            "\n--------------------------------------------------------------------------------\n"
+            "------------------------------------ BITCOM ------------------------------------\n"
+            "--------------------------------------------------------------------------------"
         )
         self.prompt = '>>>'
         self.ruler = ''
@@ -64,7 +64,7 @@ class NodeShell(Cmd):
 
     def do_pay(self, args) -> None:
         """
-        Sends money to another user
+        Sends money to another user.
         usage: pay [payee] [amount]
         """
 
@@ -72,7 +72,8 @@ class NodeShell(Cmd):
 
     def do_status(self, args) -> None:
         """
-        Display the balance (in BTM)
+        Display the authentication status.
+        Display the balance (in BTM).
         """
 
         if len(args) != 0:
@@ -81,21 +82,32 @@ class NodeShell(Cmd):
 
         else:
 
-            print("Balance: {} BTM".format(self.node.balance))
+            auth_status = self.node.authenticated
+
+            if auth_status:
+
+                print("Node is authenticated on the BITCOM network.")
+                print("Balance: {} BTM".format(self.node.balance))
+
+            else:
+
+                print("Node is not authenticated on the BITCOM network.")
 
     def do_transactions(self, args) -> None:
         """
-         Display transactions
+         Display transactions.
         """
 
         pass
 
     def do_exit(self, args) -> bool:
         """
-        Exit the program
+        Exit the program. (^D)
         """
 
         return True
+
+    do_EOF = do_exit
 
 
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
@@ -103,7 +115,44 @@ class NodeShell(Cmd):
 
 if __name__ == "__main__":
 
-    node = Node(1)
+    # Args parsing (credit: https://docs.python.org/fr/3/howto/argparse.html)
+
+    parser = ArgumentParser(
+        description='User interface for the BITCOM network'
+    )
+
+    parser.add_argument(
+                        'node_idx',
+                        action='store',
+                        help='Index of the node',
+                        type=int
+    )
+
+    parser.add_argument(
+                        '--log',
+                        action='store',
+                        help='Logger level',
+                        default='warning',
+                        choices=[
+                            'debug',
+                            'info',
+                            'warning',
+                            'error',
+                            'critical'
+                        ])
+
+    args = vars(parser.parse_args())
+
+    # Logging (credit: https://docs.python.org/3/howto/logging.html)
+
+    numeric_level = getattr(logging, args['log'].upper(), None)
+    logging.basicConfig(format='%(levelname)s:%(message)s',
+                        level=numeric_level)
+
+    # Starting node and node shell
+
+    node_idx = args['node_idx']
+    node = Node(node_idx)
     node.start()
     shell = NodeShell(node)
     shell.cmdloop()

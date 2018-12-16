@@ -8,7 +8,7 @@ from threading import Thread
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive
 from socket import socket, SHUT_RDWR
 from hashlib import sha256
-from sys import byteorder, argv
+from sys import byteorder
 from time import sleep
 
 
@@ -226,21 +226,3 @@ class Node(Thread):
 
         mining_thread = Thread(target=self.__mine)
         mining_thread.start()
-
-
-# ------------------------------------------------------- MAIN ------------------------------------------------------- #
-
-if __name__ == "__main__":
-
-    if len(argv) == 1:
-
-        # No arg passed
-        idx = int(input("Insert node index: "))
-
-    else:
-
-        # Args passed, first one is node index
-        idx = argv[1]
-
-    node = Node(idx)
-    node.start()
