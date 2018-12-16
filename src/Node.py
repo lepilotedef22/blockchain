@@ -42,7 +42,6 @@ class Node(Thread):
         self.neighbours_ip: List[str] = config['neighbours']
 
         self.server_port: int = 5001  # Arbitrary, given in the assignment
-        self.authenticate_port = 5002  # Arbitrary
         self.online_neighbours: List[str] = []  # Storing the connected neighbours to allow the transmission
         self.blockchain: Blockchain = Blockchain()
         self.authenticated: bool = False  # Authenticated to the network ?
@@ -200,7 +199,7 @@ class Node(Thread):
                     is_bound = True
 
                 except OSError:
-                    print("Address {0}:{1} already used".format(self.ip, self.authenticate_port))
+                    print("Address {0}:{1} already used".format(self.ip, self.server_port))
                     sleep(1)  # Waiting one second before attempting to bind again
 
             # Creating and starting the server thread
