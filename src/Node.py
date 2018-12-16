@@ -3,9 +3,7 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-# Typing
 from typing import List
-
 from threading import Thread
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive
 from socket import socket, SHUT_RDWR
@@ -13,10 +11,11 @@ from hashlib import sha256
 from sys import byteorder, argv
 from time import sleep
 
+
 __date__ = "07.12.2018"
 
 
-class Node:
+class Node(Thread):
     """
     Class representing a node of the network.
     """
@@ -45,8 +44,15 @@ class Node:
         self.blockchain: Blockchain = Blockchain()
         self.authenticated: bool = False  # Authenticated to the network ?
         self.nodes: List[str] = None  # IP of all the nodes on the network
+        self.server_socket: socket = None  # Server socket of the node
+        self.balance = 0
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
+
+    def stop(self) -> None:
+        """
+        Stops the thread
+        """
 
     def __authenticate(self,
                        snd_socket: socket
@@ -109,7 +115,7 @@ class Node:
                 # Node successfully authenticated
                 self.authenticated = True  # Stopping the authentication loop
                 self.nodes = auth_ok.get_request()['data']
-                print("Node {} successfully authenticated on the Bitcom network".format(self.username))
+                #print("Node {} successfully authenticated on the Bitcom network".format(self.username))
 
             elif ok_code == Bitcop.AUTH_ABORT:
 
@@ -125,8 +131,8 @@ class Node:
                 return
 
         except RuntimeError:
-            print("Socket communication broken at node {0}:{1}".format(self.ip,
-                                                                       self.authenticate_ip))
+            #print("Socket communication broken at node {0}:{1}".format(self.ip,
+            #                                                           self.authenticate_ip))
             return
 
     def __serve_forever(self,
@@ -136,13 +142,13 @@ class Node:
         Method running in the server thread.
         :param server_socket: socket receiving the requests
         """
-        print("Serving...")
+        #print("Serving...")
 
     def __mine(self) -> None:
         """
         Method used to mine blocks and to send them to neighbours
         """
-        print("Mining...")
+        #print("Mining...")
 
     # ----------------------------------------------------- RUN ----------------------------------------------------- #
 
@@ -171,9 +177,9 @@ class Node:
                     is_bound = True
 
                 except OSError:
-                    print("Server at {0}:{1} cannot be reached".format(self.authenticate_ip,
-                                                                       self.server_port))
-                    print("Please try again later...")
+                    #print("Server at {0}:{1} cannot be reached".format(self.authenticate_ip,
+                    #                                                   self.server_port))
+                    #print("Please try again later...")
                     return
 
             while not self.authenticated:
@@ -186,13 +192,14 @@ class Node:
 
                 auth_client.shutdown(SHUT_RDWR)  # Flag: no more send or rcv to expect from auth_client
                 auth_client.close()
-                print("Socket at {0}:{1} closed".format(auth_client_address[0],
-                                                        auth_client_address[1]))
+                #print("Socket at {0}:{1} closed".format(auth_client_address[0],
+                #                                        auth_client_address[1]))
 
             except OSError:
 
-                print("Socket at {0}:{1} not closed properly".format(auth_client_address[0],
-                                                                     auth_client_address[1]))
+                pass
+                #print("Socket at {0}:{1} not closed properly".format(auth_client_address[0],
+                #                                                     auth_client_address[1]))
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SERVER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -207,7 +214,7 @@ class Node:
                     is_bound = True
 
                 except OSError:
-                    print("Address {0}:{1} already used".format(self.ip, self.server_port))
+                    #print("Address {0}:{1} already used".format(self.ip, self.server_port))
                     sleep(1)  # Waiting one second before attempting to bind again
 
             # Creating and starting the server thread
@@ -219,8 +226,6 @@ class Node:
 
         mining_thread = Thread(target=self.__mine)
         mining_thread.start()
-
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ COMMAND LINE UI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
@@ -238,4 +243,4 @@ if __name__ == "__main__":
         idx = argv[1]
 
     node = Node(idx)
-    node.run()
+    node.start()
