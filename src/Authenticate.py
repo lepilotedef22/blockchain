@@ -40,7 +40,6 @@ class Authenticate(Thread):
         self.ip: str = config['ip_address']
         self.port: int = 5001
         self.all_nodes: Dict[str, str] = config['nodes']  # {ip, secret}
-        #  self.nodes_to_connect: Dict[str, str] = config['nodes']  # TODO: check whether it is useful
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
@@ -110,7 +109,9 @@ class Authenticate(Thread):
                 if response == expected_response:
 
                     # Correct response, node can be authenticated
-                    auth_ok = BitcopAuthenticate(Bitcop.AUTH_OK)
+                    nodes_ip = list(self.all_nodes.keys())
+                    auth_ok = BitcopAuthenticate(Bitcop.AUTH_OK,
+                                                 nodes_ip)
                     send(client_sock, auth_ok)
                     print("Server successfully authenticated node at {}".format(client_address[0]))
                     return

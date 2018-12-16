@@ -16,7 +16,7 @@ from time import sleep
 __date__ = "07.12.2018"
 
 
-class Node(Thread):
+class Node:
     """
     Class representing a node of the network.
     """
@@ -42,9 +42,9 @@ class Node(Thread):
         self.neighbours_ip: List[str] = config['neighbours']
 
         self.server_port: int = 5001  # Arbitrary, given in the assignment
-        self.online_neighbours: List[str] = []  # Storing the connected neighbours to allow the transmission
         self.blockchain: Blockchain = Blockchain()
         self.authenticated: bool = False  # Authenticated to the network ?
+        self.nodes: List[str] = None  # IP of all the nodes on the network
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
@@ -57,7 +57,7 @@ class Node(Thread):
             1) node sends its user_name to the auth_center to indicate that it wants to be authenticated
             2) auth_center replies with a Nonce
             3) node replies with (user_name, sha256(nonce|secret)) with secret the shared secret
-            4) auth_center replies with ok
+            4) auth_center replies with the list of nodes IP
         If at any point something goes wrong, each host can send an ABORT message.
         :param snd_socket: the socket used to communicate with the authentication center
         """
@@ -108,6 +108,7 @@ class Node(Thread):
 
                 # Node successfully authenticated
                 self.authenticated = True  # Stopping the authentication loop
+                self.nodes = auth_ok.get_request()['data']
                 print("Node {} successfully authenticated on the Bitcom network".format(self.username))
 
             elif ok_code == Bitcop.AUTH_ABORT:
@@ -135,6 +136,13 @@ class Node(Thread):
         Method running in the server thread.
         :param server_socket: socket receiving the requests
         """
+        print("Serving...")
+
+    def __mine(self) -> None:
+        """
+        Method used to mine blocks and to send them to neighbours
+        """
+        print("Mining...")
 
     # ----------------------------------------------------- RUN ----------------------------------------------------- #
 
@@ -207,6 +215,13 @@ class Node(Thread):
                                    args=[node_server])
             server_thread.start()
 
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MINING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+        mining_thread = Thread(target=self.__mine)
+        mining_thread.start()
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ COMMAND LINE UI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
 
 # ------------------------------------------------------- MAIN ------------------------------------------------------- #
 
@@ -223,4 +238,4 @@ if __name__ == "__main__":
         idx = argv[1]
 
     node = Node(idx)
-    node.start()
+    node.run()

@@ -17,17 +17,17 @@ __date__ = "10.12.2018"
 class BitcopAuthenticate(Bitcop):
 
     """
-    Class dealing with authentication messages. Codes : 10 : authentication request
-                                                        11 : challenge
-                                                        12 : response
-                                                        13 : authenticated
+    Class dealing with authentication messages. Codes: 10: AUTH_REQ, authentication request
+                                                       11: AUTH_CHAL, challenge
+                                                       12: AUTH_RESP, response
+                                                       13: AUTH_OK, authenticated
     """
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
                  code: Optional[int] = None,
-                 data: Optional[Union[str, int, List[str]]] = "ok",
+                 data: Optional[Union[str, int, List[str]]] = None,
                  data_rcv: Optional[bytes] = None
                  ) -> None:
         """
@@ -63,7 +63,7 @@ class BitcopAuthenticate(Bitcop):
                 # Invalid code for Authentication
                 raise CodeNotValidException(code=code, valid_codes=Bitcop.AUTH)
 
-            if code == Bitcop.AUTH_REQ or code == Bitcop.AUTH_ABORT or code == Bitcop.AUTH_OK:
+            if code == Bitcop.AUTH_REQ or code == Bitcop.AUTH_ABORT:
 
                 # Data is a string
                 data = parsed_msg['data'].decode('utf-8')
@@ -73,7 +73,7 @@ class BitcopAuthenticate(Bitcop):
                 # Data is a int
                 data = int.from_bytes(parsed_msg['data'], byteorder)
 
-            elif code == Bitcop.AUTH_RESP:
+            elif code == Bitcop.AUTH_RESP or code == Bitcop.AUTH_OK:
 
                 # Data is a list of strings
                 data = loads(parsed_msg['data'].decode('utf-8'))
@@ -94,7 +94,7 @@ class BitcopAuthenticate(Bitcop):
 
             # New message to be sent
             data = ""
-            if self.code == Bitcop.AUTH_OK or self.code == Bitcop.AUTH_ABORT or self.code == Bitcop.AUTH_REQ:
+            if self.code == Bitcop.AUTH_ABORT or self.code == Bitcop.AUTH_REQ:
 
                 # Data is a string
                 data = self.data.encode('utf-8')
@@ -104,7 +104,7 @@ class BitcopAuthenticate(Bitcop):
                 # Data is a int
                 data = self.data.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder)
 
-            elif self.code == Bitcop.AUTH_RESP:
+            elif self.code == Bitcop.AUTH_OK or self.code == Bitcop.AUTH_RESP:
 
                 # Data is list of strings
                 data = dumps(self.data).encode('utf-8')
