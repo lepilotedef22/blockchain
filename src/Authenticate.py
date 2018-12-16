@@ -148,7 +148,6 @@ class Authenticate(Thread):
             # Setting up connection
             auth_server_address = (self.ip, self.port)
             is_bound = False
-
             while not is_bound:
 
                 try:
