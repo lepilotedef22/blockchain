@@ -62,7 +62,7 @@ class NodeShell(Cmd):
         self.node.stop()
         print("Node stopped.\n")
 
-    def do_pay(self, args) -> None:
+    def do_pay(self, arg) -> None:
         """
         Sends money to another user.
         usage: pay [payee] [amount]
@@ -70,15 +70,15 @@ class NodeShell(Cmd):
 
         pass
 
-    def do_status(self, args) -> None:
+    def do_status(self, arg) -> None:
         """
         Display the authentication status.
         Display the balance (in BTM).
         """
 
-        if len(args) != 0:
+        if len(arg) != 0:
 
-            print("do_status() takes 0 positional argument but {} were given".format(len(args)))
+            print("do_status() takes 0 positional argument but {} were given".format(len(arg)))
 
         else:
 
@@ -92,15 +92,16 @@ class NodeShell(Cmd):
             else:
 
                 print("Node is not authenticated on the BITCOM network.")
+                print("Please relaunch the program...")
 
-    def do_transactions(self, args) -> None:
+    def do_transactions(self, arg) -> None:
         """
          Display transactions.
         """
 
         pass
 
-    def do_exit(self, args) -> bool:
+    def do_exit(self, arg) -> bool:
         """
         Exit the program. (^D)
         """

@@ -132,8 +132,8 @@ class Node(Thread):
                 return
 
         except RuntimeError:
-            logging.error("Socket communication broken at node {0}:{1}".format(self.ip,
-                                                                               self.authenticate_ip))
+            logging.error("Socket communication broken at node {}:{}".format(self.ip,
+                                                                             self.authenticate_ip))
             return
 
     def __serve_forever(self,
@@ -156,6 +156,7 @@ class Node(Thread):
         Main method of the Node thread :
             1. tries to be authenticated on the network by the authentication center
             2. starts the server
+            3. starts the mining
         """
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ AUTHENTICATION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -176,8 +177,8 @@ class Node(Thread):
                     is_bound = True
 
                 except OSError:
-                    logging.critical("Server at {0}:{1} cannot be reached".format(self.authenticate_ip,
-                                                                                  self.server_port))
+                    logging.critical("Server at {}:{} cannot be reached".format(self.authenticate_ip,
+                                                                                self.server_port))
 
             while not self.authenticated:
                 # Trying to be authenticated on the network
@@ -189,14 +190,14 @@ class Node(Thread):
 
                 auth_client.shutdown(SHUT_RDWR)  # Flag: no more send or rcv to expect from auth_client
                 auth_client.close()
-                logging.info("Socket at {0}:{1} closed".format(auth_client_address[0],
-                                                               auth_client_address[1]))
+                logging.info("Socket at {}:{} closed".format(auth_client_address[0],
+                                                             auth_client_address[1]))
 
             except OSError:
 
                 pass
-                logging.warning("Socket at {0}:{1} not closed properly".format(auth_client_address[0],
-                                                                               auth_client_address[1]))
+                logging.warning("Socket at {}:{} not closed properly".format(auth_client_address[0],
+                                                                             auth_client_address[1]))
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SERVER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -211,7 +212,7 @@ class Node(Thread):
                     is_bound = True
 
                 except OSError:
-                    logging.info("Address {0}:{1} already used".format(self.ip, self.server_port))
+                    logging.info("Address {}:{} already used".format(self.ip, self.server_port))
                     sleep(1)  # Waiting one second before attempting to bind again
 
             # Creating and starting the server thread
