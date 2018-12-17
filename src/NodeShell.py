@@ -3,7 +3,7 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from src import Node
+from src import Node, TransactionNotValidException
 from cmd import Cmd
 import logging
 from argparse import ArgumentParser
@@ -50,7 +50,7 @@ class NodeShell(Cmd):
         """
 
         print(self.intro)  # Printing program title
-        self.do_help('')  # Printing available commands
+        print("\nEnter 'help' to see the commands available\n")
         self.intro = ''
 
     def postloop(self) -> None:
@@ -66,10 +66,47 @@ class NodeShell(Cmd):
     def do_pay(self, arg) -> None:
         """
         Sends money to another user.
-        usage: pay [payee ip] [amount]
         """
 
-        pass
+        # Arg parsing
+
+        pay_parser = ArgumentParser(
+            description="Sends money to another user."
+        )
+
+        pay_parser.add_argument(
+            'ip',
+            action='store',
+            help='IP address of the user receiving the money',
+            type=str
+        )
+
+        pay_parser.add_argument(
+            'amount',
+            action='store',
+            help='Amount of money you want to send (in BTM)',
+            type=float
+        )
+
+        try:
+
+            # Handling wring type of args passed
+            pay_args = vars(pay_parser.parse_args(arg.split()))
+
+        except SystemExit:
+
+            return
+
+        payee = pay_args['ip']
+        amount = pay_args['amount']
+        try:
+
+            self.node.submit_transaction(payee, amount)
+            print("Transaction submitted to the network.")
+
+        except TransactionNotValidException as e:
+
+            logging.warning(e.message)
 
     def do_status(self, arg) -> None:
         """
@@ -77,23 +114,33 @@ class NodeShell(Cmd):
         Display the balance (in BTM).
         """
 
-        if len(arg) != 0:
+        # Arg parsing
 
-            print("do_status() takes 0 positional argument but {} were given".format(len(arg)))
+        status_parser = ArgumentParser(
+            description="""Display the authentication status, IP and current balance (in BTM).
+        """
+        )
+
+        try:
+
+            status_parser.parse_args(arg.split())
+
+        except SystemExit:
+
+            return
+
+        auth_status = self.node.authenticated
+
+        if auth_status:
+
+            print("Node is authenticated on the BITCOM network.")
+            print("IP: {}".format(self.node.ip))
+            print("Balance: {} BTM".format(self.node.balance))
 
         else:
 
-            auth_status = self.node.authenticated
-
-            if auth_status:
-
-                print("Node is authenticated on the BITCOM network.")
-                print("Balance: {} BTM".format(self.node.balance))
-
-            else:
-
-                print("Node is not authenticated on the BITCOM network.")
-                print("Please relaunch the program...")
+            print("Node is not authenticated on the BITCOM network.")
+            print("Please relaunch the program...")
 
     def do_transactions(self, arg) -> None:
         """

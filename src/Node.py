@@ -3,10 +3,11 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from typing import List
+from typing import List, Dict
 from threading import Thread, Lock
-from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive
-from socket import socket, SHUT_RDWR
+from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive, Transaction, \
+    TransactionNotValidException
+from socket import socket
 from hashlib import sha256
 from sys import byteorder
 from time import sleep
@@ -49,6 +50,9 @@ class Node(Thread):
         self.balance = 0
         self.is_serving = False  # Node IP is serving ?
         self.is_mining = False  # Node is mining ?
+        self.transaction_idx: int = 0  # Index of the last transaction
+        self.pending_transactions: List[Transaction] = []  # List of transactions waiting to be mined into a block
+        self.ledger: Dict[str, float] = None  # Amount on the accounts of all the users
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
@@ -124,6 +128,8 @@ class Node(Thread):
                 # Node successfully authenticated
                 self.authenticated = True  # Stopping the authentication loop
                 self.nodes = auth_ok.get_request()['data']
+                self.ledger = {ip: 0 for ip in self.nodes}  # Initializing balance of each user to 0 BTM
+                self.nodes.remove(self.ip)  # Removing own ip address from list of other users ip
                 logging.info("Node {} successfully authenticated on the Bitcom network".format(self.username))
 
             elif ok_code == Bitcop.AUTH_ABORT:
@@ -199,6 +205,47 @@ class Node(Thread):
         # Returning from thread once the job is done
         return
 
+    def submit_transaction(self,
+                           payee: str,
+                           amount: float
+                           ) -> None:
+        """
+        Submits a transaction to the network. Adds it to the pending transactions list.
+        :param payee: ip of the user receiving the money
+        :param amount: amount of money transferred
+        """
+
+        if self.authenticated:
+
+            # Required to be authenticated to submit a transaction
+
+            if payee in self.nodes:
+
+                # Payee is valid
+                transaction: Transaction = Transaction(self.transaction_idx,
+                                                       self.ip,
+                                                       payee,
+                                                       amount,
+                                                       self.ledger)  # Exception raised if amount > balance
+                with Lock():
+
+                    self.ledger = transaction.ledger  # Updating the ledger
+                    self.pending_transactions.append(transaction)
+
+                # TODO: send transaction
+
+                logging.info(self.pending_transactions)
+
+            else:
+
+                # Invalid payee
+                raise TransactionNotValidException(nodes=self.nodes)
+
+        else:
+
+            message: str = 'Not authenticated on the network. Cannot submit transaction.'
+            raise TransactionNotValidException(message=message)
+
     # ----------------------------------------------------- RUN ----------------------------------------------------- #
 
     def run(self) -> None:
@@ -225,8 +272,9 @@ class Node(Thread):
                     is_bound = True
 
                 except OSError:
-                    logging.critical("Server at {}:{} cannot be reached".format(self.authenticate_ip,
+                    logging.info("Server at {}:{} cannot be reached".format(self.authenticate_ip,
                                                                                 self.server_port))
+                    return
 
             while not self.authenticated:
                 # Trying to be authenticated on the network

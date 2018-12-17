@@ -7,6 +7,8 @@ from src.model.utils.FormatHelper import *
 from src.model.Exceptions.BlockNotValidException import BlockNotValidException
 from src.model.bitcop.Bitcop import Bitcop
 from src.model.bitcop.Exceptions.CodeNotValidException import CodeNotValidException
+from src.model.Exceptions.TranscationNotValidException import TransactionNotValidException
+from src.model.Transaction import Transaction
 from src.model.bitcop.BitcopAuthenticate import BitcopAuthenticate
 from src.model.utils.SocketHelper import *
 from src.model.Block import Block
