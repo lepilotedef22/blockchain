@@ -40,6 +40,15 @@ class Bitcop(ABC):
 
     AUTH: List[int] = [AUTH_REQ, AUTH_CHAL, AUTH_RESP, AUTH_OK, AUTH_ABORT]
 
+    # Transaction
+
+    TRAN_ID: int = 20  # Message transaction id
+    TRAN_NN: int = 21  # Message is transaction no need
+    TRAN_EX: int = 22  # Message is transaction exchange
+    TRAN_ABORT: int = 23  # Message is abort transaction
+
+    TRAN: List[int] = [TRAN_ID, TRAN_NN, TRAN_EX, TRAN_ABORT]
+
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CONSTANTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
     NUMBER_BYTES_LENGTH: int = 2  # Number of bytes used to represent the length of the messages
@@ -62,6 +71,19 @@ class Bitcop(ABC):
 
         self.code: int = code
         self.data_rcv: bytes = data_rcv
+        self.data = None
+
+    # --------------------------------------------------- METHODS --------------------------------------------------- #
+
+    def get_request(self) -> Dict:
+
+        """
+        Returns a dictionary containing the information of the message
+        :return: dictionary with the information in the message : {"code": code, "data": data}
+        """
+
+        return {'code': self.code,
+                'data': self.data}
 
     # ----------------------------------------------- ABSTRACT METHODS ----------------------------------------------- #
 
@@ -70,15 +92,6 @@ class Bitcop(ABC):
         """
         Translates the request into a byte stream. Needs to be implemented.
         :return: the byte stream
-        """
-
-        pass
-
-    @abstractmethod
-    def get_request(self) -> Dict:
-        """
-        Get the request information in a dictionary. Needs to be implemented.
-        :return: dictionary containing the information of the message
         """
 
         pass

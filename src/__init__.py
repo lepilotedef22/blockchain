@@ -10,6 +10,7 @@ from src.model.bitcop.Exceptions.CodeNotValidException import CodeNotValidExcept
 from src.model.Exceptions.TranscationNotValidException import TransactionNotValidException
 from src.model.Transaction import Transaction
 from src.model.bitcop.BitcopAuthenticate import BitcopAuthenticate
+from src.model.bitcop.BitcopTransaction import BitcopTransaction
 from src.model.utils.SocketHelper import *
 from src.model.Block import Block
 from src.model.Blockchain import Blockchain

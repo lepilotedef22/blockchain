@@ -3,7 +3,7 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from typing import Dict
+from typing import Dict, Optional
 from time import time
 from src import TransactionNotValidException
 
@@ -19,11 +19,12 @@ class Transaction:
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
-                 idx: int,
-                 payer: str,
-                 payee: str,
-                 amount: float,
-                 prev_ledger: Dict[str, float]
+                 idx: Optional[int] = None,
+                 payer: Optional[str] = None,
+                 payee: Optional[str] = None,
+                 amount: Optional[float] = None,
+                 prev_ledger: Optional[Dict[str, float]] = None,
+                 transaction_json: Optional[Dict] = None
                  ) -> None:
         """
         Constructor of Transaction
@@ -33,33 +34,49 @@ class Transaction:
         :param amount: amount (in BTM)
         :param prev_ledger: state of the accounts of the users before this transaction. Required to give money to the
             poorest and to check whether the transaction is valid. Format: {user_ip, user_money}
+        :param transaction_json: if the object is instantiated from a received json
         """
 
-        self.idx: int = idx
-        self.payer: str = payer
-        self.payee: str = payee
-        self.amount: float = amount
-        self.timestamp: float = time()  # Time in EPOCH format
+        if transaction_json is None:
 
-        available_amount = prev_ledger[self.payer]
-        if self.amount > available_amount:
+            # Transaction is not created from a received one, all the other args are assumed to be not None
+            self.idx: int = idx
+            self.payer: str = payer
+            self.payee: str = payee
+            self.amount: float = amount
+            self.timestamp: float = time()  # Time in EPOCH format
 
-            raise TransactionNotValidException(spent=amount,
-                                               available=available_amount)
+            available_amount = prev_ledger[self.payer]
+            if self.amount > available_amount:
 
-        # Updating the ledger
+                # Over-spending check
+                raise TransactionNotValidException(spent=amount,
+                                                   available=available_amount)
 
-        self.ledger = {}
-        for user in prev_ledger:
+            # Updating the ledger
 
-            if user == self.payer:
+            self.ledger = {}
+            for user in prev_ledger:
 
-                self.ledger[user] = prev_ledger[user] - self.amount
+                if user == self.payer:
 
-            elif user == self.payee:
+                    self.ledger[user] = prev_ledger[user] - self.amount
 
-                self.ledger[user] = prev_ledger[user] + self.amount
+                elif user == self.payee:
 
-            else:
+                    self.ledger[user] = prev_ledger[user] + self.amount
 
-                self.ledger[user] = prev_ledger[user]
+                else:
+
+                    self.ledger[user] = prev_ledger[user]
+
+        else:
+
+            # Transaction created from a received one, other args are assumed to be None
+            # No over-spending check, assuming that the sending node has already performed it
+            self.idx = transaction_json['idx']
+            self.payer = transaction_json['payer']
+            self.payee = transaction_json['payee']
+            self.amount = transaction_json['amount']
+            self.timestamp = transaction_json['timestamp']
+            self.ledger = transaction_json['ledger']
