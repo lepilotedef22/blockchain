@@ -61,11 +61,12 @@ class NodeShell(Cmd):
         print("\nNode stopping...")
         self.node.stop()
         print("Node stopped.\n")
+        logging.info('Node is alive: {}'.format(node.is_alive()))
 
     def do_pay(self, arg) -> None:
         """
         Sends money to another user.
-        usage: pay [payee] [amount]
+        usage: pay [payee ip] [amount]
         """
 
         pass

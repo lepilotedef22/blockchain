@@ -4,7 +4,7 @@
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 from typing import List
-from threading import Thread
+from threading import Thread, Lock
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive
 from socket import socket, SHUT_RDWR
 from hashlib import sha256
@@ -47,13 +47,21 @@ class Node(Thread):
         self.nodes: List[str] = None  # IP of all the nodes on the network
         self.server_socket: socket = None  # Server socket of the node
         self.balance = 0
+        self.is_serving = False  # Node IP is serving ?
+        self.is_mining = False  # Node is mining ?
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
     def stop(self) -> None:
         """
-        Stops the thread
+        Stops the threads
         """
+
+        with Lock():
+
+            # Shutting down the threads
+            self.is_mining = False
+            self.is_serving = False
 
     def __authenticate(self,
                        snd_socket: socket
@@ -136,18 +144,60 @@ class Node(Thread):
                                                                              self.authenticate_ip))
             return
 
-    def __serve_forever(self,
-                        server_socket: socket
-                        ) -> None:
+    def __serve_forever(self) -> None:
         """
         Method running in the server thread.
-        :param server_socket: socket receiving the requests
         """
+
+        with socket() as node_server:
+
+            # Creating a socket with default mode: IPv4/TCP
+            is_bound = False
+            while not is_bound:
+
+                try:
+                    node_server.bind((self.ip, self.server_port))
+                    is_bound = True
+                    self.server_socket = node_server
+
+                except OSError:
+                    logging.info("Address {}:{} already used".format(self.ip, self.server_port))
+                    sleep(1)  # Waiting one second before attempting to bind again
+
+            with Lock():
+                serving_condition: bool = self.is_serving
+
+            while serving_condition:
+
+                # Serve...
+
+                # End of loop
+                with Lock():
+                    serving_condition: bool = self.is_serving
+
+        # Returning from thread once the job is done
+        return
 
     def __mine(self) -> None:
         """
         Method used to mine blocks and to send them to neighbours
         """
+
+        with Lock():
+
+            mining_condition: bool = self.is_mining
+
+        while mining_condition:
+
+            # Mine...
+
+            # End of mining loop
+
+            with Lock():
+                mining_condition = self.is_mining
+
+        # Returning from thread once the job is done
+        return
 
     # ----------------------------------------------------- RUN ----------------------------------------------------- #
 
@@ -167,13 +217,11 @@ class Node(Thread):
             is_bound = False
             auth_server_address = (self.authenticate_ip,
                                    self.server_port)
-            auth_client_address = None
             while not is_bound:
 
                 try:
                     auth_client.bind((self.ip, 0))  # OS takes care of free port allocation
                     auth_client.connect(auth_server_address)
-                    auth_client_address = auth_client.getsockname()
                     is_bound = True
 
                 except OSError:
@@ -184,43 +232,20 @@ class Node(Thread):
                 # Trying to be authenticated on the network
                 self.__authenticate(auth_client)
 
-            # Shutting down connection with authenticate center
-
-            try:
-
-                auth_client.shutdown(SHUT_RDWR)  # Flag: no more send or rcv to expect from auth_client
-                auth_client.close()
-                logging.info("Socket at {}:{} closed".format(auth_client_address[0],
-                                                             auth_client_address[1]))
-
-            except OSError:
-
-                pass
-                logging.warning("Socket at {}:{} not closed properly".format(auth_client_address[0],
-                                                                             auth_client_address[1]))
-
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SERVER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-        with socket() as node_server:
+        # Creating and starting the server thread
+        server_thread = Thread(target=self.__serve_forever)
+        with Lock():
+            self.is_serving = True
 
-            # Creating a socket with default mode: IPv4/TCP
-            is_bound = False
-            while not is_bound:
-
-                try:
-                    node_server.bind((self.ip, self.server_port))
-                    is_bound = True
-
-                except OSError:
-                    logging.info("Address {}:{} already used".format(self.ip, self.server_port))
-                    sleep(1)  # Waiting one second before attempting to bind again
-
-            # Creating and starting the server thread
-            server_thread = Thread(target=self.__serve_forever,
-                                   args=[node_server])
-            server_thread.start()
+        server_thread.start()
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MINING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
+        # Creating and starting the thread
         mining_thread = Thread(target=self.__mine)
+        with Lock():
+            self.is_mining = True
+
         mining_thread.start()
