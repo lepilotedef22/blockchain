@@ -1,35 +1,29 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__date__ = "29/11/2018"
+__date__ = "12.12.2018"
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 from unittest import TestCase, main
-from src import parse_config
+from src import Bitcop, BitcopAuthenticate, CodeNotValidException
 
 # ------------------------------------------------------ TESTS ------------------------------------------------------ #
 
 
-class ComHelperTest(TestCase):
-
+class BitcopTest(TestCase):
     """
-    This test file assesses the ComHelperModule
+    This test file assesses the Bitcop classes for the Bitcop protocol
     """
 
-    def test_config_parser(self):
-
+    def test_code_not_valid_exception(self):
         """
-        Tests the config_parser function
+        Tests if the CodeNotValidException is raised
         """
 
-        expected_dico = {
-            'node': {'ip_address': '127.0.0.1', 'username': 'host_1'},
-            'registration': {'ip_address': '127.0.0.10', 'secret': 'host_1_secret'},
-            'neighbours': ['127.0.0.2', '127.0.0.3']
-        }
+        with self.assertRaises(CodeNotValidException):
 
-        self.assertEqual(parse_config(1), expected_dico)
+            BitcopAuthenticate(Bitcop.DEFAULT)
 
 #  -----------------------------------------------------LAUNCHER ----------------------------------------------------- #
 
