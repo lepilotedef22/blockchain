@@ -213,6 +213,8 @@ class Node(Thread):
             # Creating a socket with default mode: IPv4/TCP
             peer_address = (peer_ip,
                             self.server_port)
+            logging.debug("Peer receiving transaction: {}".format(peer_address[0],
+                                                                  peer_address[1]))
 
             try:
 
@@ -227,35 +229,51 @@ class Node(Thread):
             # Send transaction idx
             with Lock():
 
+                last_idx = self.pending_transactions[-1].idx
                 tran_idx = BitcopTransaction(Bitcop.TRAN_ID,
-                                             self.pending_transactions[-1].idx)
+                                             last_idx)
 
+            logging.info("Latest transaction idx: {}".format(last_idx))
+
+            logging.debug("Sending transaction idx to peer")
             send(snd_socket, tran_idx)
+            logging.debug("Transaction idx sent to peer")
 
             # Receive last transaction idx of the peer
+            logging.debug("Receiving last transaction idx from peer")
             tran_idx_peer = receive(snd_socket)
+            logging.debug("Received last transaction from peer")
             tran_idx_peer_code = tran_idx_peer.get_request()['code']
+
+            logging.info("Last transaction idx message code: {}".format(tran_idx_peer_code))
 
             if tran_idx_peer_code == Bitcop.TRAN_ABORT:
 
                 # Peer aborted the operation
+                logging.info("Peer aborted the communication")
                 return
 
             elif tran_idx_peer_code != Bitcop.TRAN_ID:
 
                 # Code does not match that of an Transaction ID message, or Transaction no-need
                 abort_message = BitcopTransaction(Bitcop.TRAN_ABORT, 'abort')
+                logging.debug("Code: {} != {}".format(tran_idx_peer_code,
+                                                      Bitcop.TRAN_ID))
+                logging.debug("Sending abort message")
                 send(snd_socket, abort_message)
+                logging.debug("Abort message sent")
                 return
 
             last_idx_peer = tran_idx_peer.get_request()['data']
+            logging.info("Last transaction idx of peer: {}".format(last_idx_peer))
+
             with Lock():
 
-                last_idx = self.pending_transactions[-1].idx
                 first_idx_pending = self.pending_transactions[0].idx
+                logging.debug("idx of the first pending transaction: {}".format(first_idx_pending))
 
             # Send required transactions
-            # TODO: add transactions further than those in pending transactions (blocks...)
+            # Assuming that only the pending transactions need to be synced
             for idx in range(last_idx_peer + 1, last_idx + 1):
 
                 with Lock():
@@ -264,7 +282,9 @@ class Node(Thread):
 
                 transaction_message = BitcopTransaction(Bitcop.TRAN_EX,
                                                         snd_transaction)
+                logging.debug("Sending transaction with idx: {} to peer".format(idx - first_idx_pending))
                 send(snd_socket, transaction_message)
+                logging.debug("Transaction with idx: {} sent to peer".format(idx - first_idx_pending))
 
     def submit_transaction(self,
                            payee: str,
@@ -293,7 +313,7 @@ class Node(Thread):
                     # Updating args
                     self.ledger = transaction.ledger
                     self.pending_transactions.append(transaction)
-                    logging.info("Ledger and pending transactions updated")
+                    logging.debug("Ledger and pending transactions updated")
 
                 # Sending transaction to neighbours
 
@@ -301,12 +321,13 @@ class Node(Thread):
 
                     try:
 
+                        logging.debug("Sending transaction to peer {}".format(peer_ip))
                         self.__send_transaction(peer_ip)
 
                     except RuntimeError:
 
-                        logging.info("Transaction with index {} could not be sent to {}".format(transaction.idx,
-                                                                                                peer_ip))
+                        logging.warning("Transaction with index {} could not be sent to {}".format(transaction.idx,
+                                                                                                   peer_ip))
 
             else:
 
