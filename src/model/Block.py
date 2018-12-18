@@ -5,20 +5,18 @@ __date__ = "03.12.2018"
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-# For types
 
-from typing import List, Dict
-
-# For block formatting
+from typing import List, Dict, Optional
+from random import getrandbits
 
 from time import time
 from json import dumps
 from struct import pack
 from sys import byteorder
 
-# For SHA256 hashing
-
 from hashlib import sha256
+
+from src import Transaction
 
 # Exceptions
 
@@ -35,18 +33,23 @@ class Block:
     This class deals with the blocks of the block chain
     """
 
+    NUMBER_BYTES_NONCE: int = 8
+
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
-    def __init__(
-
-            self, index: int, ledger: Ledger, prev_hash: bytes,
-            nonce: int = None, timestamp: float = None, cur_hash: bytes = None
-
-    ) -> None:
+    def __init__(self,
+                 idx: Optional[int] = None,
+                 prev_hash: Optional[bytes] = None,
+                 transaction_list: Optional[List[Transaction]] = None,
+                 nonce: Optional[int] = None,
+                 timestamp: Optional[float] = None,
+                 cur_hash: Optional[bytes] = None,
+                 block_json: Optional[Dict] = None
+                 ) -> None:
         
         """
         Constructor of the block class
-        :param index: index of the block in the block chain
+        :param idx: index of the block in the block chain
         :param ledger: current state of the data to be saved in the block. It is a list of all the pending transactions
         committed between two blocks. A transaction is the state of the network i.e. a dictionary :
             transaction : {"user" : user_money}
@@ -58,43 +61,48 @@ class Block:
         broad casted by another node) for the current hash of the block
         """
         
-        is_being_copied = timestamp is not None or cur_hash is not None
+        if block_json is None:
 
-        self.index = index
-        self.ledger = ledger
-        self.prev_hash = prev_hash
+            self.idx: int = idx
+            self.prev_hash: bytes = prev_hash
+            self.transaction_list: List[Transaction] = transaction_list
+            self.nonce: int = getrandbits(8 * self.NUMBER_BYTES_NONCE)
+            self.timestamp: float = time()
 
-        if is_being_copied:
+            hash_arg = self.prev_hash
 
-            self.timestamp = timestamp
-            self.cur_hash = cur_hash
+            for transaction in self.transaction_list:
+                hash_arg += dumps(transaction.get_json()).encode('utf-8')
 
-        else:
+            hash_arg += self.nonce
 
-            self.timestamp = time()
-
-        chunk = bytes([index]) + dumps(self.ledger).encode('utf-8') + pack("!f", self.timestamp) + self.prev_hash
-
-        if nonce is not None:
-
-            # Mining is active
-
-            self.nonce = nonce
-            chunk += self.nonce.to_bytes(8, byteorder, signed=False)  # 8 bytes conversion is arbitrary,
-            # need to be checked !
-
-        # Computing hash, checking validity of the block
-
-        comp_hash = sha256(chunk)
-
-        if is_being_copied:
-
-            if comp_hash != self.cur_hash:
-
-                # Block is invalid, exception is raised
-
-                raise BlockNotValidException("Block #{0} is invalid.".format(self.index))
+            self.cur_hash = sha256(hash_arg)
 
         else:
 
-            self.cur_hash = comp_hash
+            # Transaction created from a received one, other args are assumed to be None
+            # No over-spending check, assuming that the sending node has already performed it
+
+            self.idx = block_json['idx']
+            self.prev_hash = block_json['prev_hash']
+            self.transaction_list = block_json['transaction_list']
+            self.nonce = block_json['nonce']
+            self.timestamp = block_json['timestamp']
+            self.cur_hash = block_json['cur_hash']
+
+
+
+    # --------------------------------------------------- METHODS --------------------------------------------------- #
+
+    def get_json(self) -> Dict:
+        """
+        Returns the attributes of the object as a json
+        :return: json with the attributes
+        """
+
+        return {'idx': self.idx,
+                'prev_hash': self.prev_hash,
+                'transaction_list': self.transaction_list,
+                'nonce': self.nonce,
+                'timestamp': self.timestamp,
+                'cur_hash': self.cur_hash}
