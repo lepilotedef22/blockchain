@@ -12,6 +12,8 @@ from time import time
 from json import dumps
 from hashlib import sha256
 from src import Transaction
+from src import BlockNotValidException
+
 
 # ------------------------------------------------------ TYPES ------------------------------------------------------ #
 
@@ -68,18 +70,18 @@ class Block:
             self.transaction_list = block_json['transaction_list']
             self.nonce = block_json['nonce']
             self.timestamp = block_json['timestamp']
+            json_hash = block_json['cur_hash']
 
-            if block_json['cur_hash'] is self.block_calculation():
+            if json_hash is not self.block_calculation():
 
-                self.cur_hash = block_json['cur_hash']
+                raise BlockNotValidException(hash_computed=self.block_calculation(),
+                                             given_hash=json_hash)
 
             else:
 
-                print('Do something')
+                self.cur_hash = block_json['cur_hash']
 
-                #DO SOMETHING
-
-    # --------------------------------------------------- METHODS --------------------------------------------------- #
+# ----------------------------------------------------- METHODS ----------------------------------------------------- #
 
     def get_json(self) -> Dict:
         """
