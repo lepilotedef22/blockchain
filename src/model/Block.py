@@ -1,36 +1,25 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__date__ = "03.12.2018"
+__date__ = "18.12.2018"
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 
 from typing import List, Dict, Optional
 from random import getrandbits
-
 from time import time
 from json import dumps
-from struct import pack
-from sys import byteorder
-
 from hashlib import sha256
-
 from src import Transaction
 
-# Exceptions
-
-from src import BlockNotValidException
-
 # ------------------------------------------------------ TYPES ------------------------------------------------------ #
-
-Ledger = List[Dict[str, str]]
 
 
 class Block:
 
     """
-    This class deals with the blocks of the block chain
+    Class dealing with the Blccks
     """
 
     NUMBER_BYTES_NONCE: int = 8
@@ -50,10 +39,8 @@ class Block:
         """
         Constructor of the block class
         :param idx: index of the block in the block chain
-        :param ledger: current state of the data to be saved in the block. It is a list of all the pending transactions
-        committed between two blocks. A transaction is the state of the network i.e. a dictionary :
-            transaction : {"user" : user_money}
         :param prev_hash: hash of the previous block in the block chain
+        :param transaction_list: list of all the transaction between the previous block and this one
         :param nonce: nonce used to mine the block
         :param timestamp: optional value (used only if the block is being created based on a received block 
         broad casted by another node) for the time at which the block was emitted
@@ -69,14 +56,7 @@ class Block:
             self.nonce: int = getrandbits(8 * self.NUMBER_BYTES_NONCE)
             self.timestamp: float = time()
 
-            hash_arg = self.prev_hash
-
-            for transaction in self.transaction_list:
-                hash_arg += dumps(transaction.get_json()).encode('utf-8')
-
-            hash_arg += self.nonce
-
-            self.cur_hash = sha256(hash_arg)
+            self.cur_hash = self.block_calculation()
 
         else:
 
@@ -88,9 +68,16 @@ class Block:
             self.transaction_list = block_json['transaction_list']
             self.nonce = block_json['nonce']
             self.timestamp = block_json['timestamp']
-            self.cur_hash = block_json['cur_hash']
 
+            if block_json['cur_hash'] is self.block_calculation():
 
+                self.cur_hash = block_json['cur_hash']
+
+            else:
+
+                print('Do something')
+
+                #DO SOMETHING
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
@@ -106,3 +93,20 @@ class Block:
                 'nonce': self.nonce,
                 'timestamp': self.timestamp,
                 'cur_hash': self.cur_hash}
+
+    def block_calculation(self) -> bytes:
+        """
+        Compute the hash of the current block based on the previous one
+        :return: hash of the block in bytes
+        """
+
+        hash_arg = self.prev_hash
+
+        for transaction in self.transaction_list:
+            hash_arg += dumps(transaction.get_json()).encode('utf-8')
+
+        hash_arg += self.nonce
+
+        cur_hash = sha256(hash_arg)
+
+        return cur_hash
