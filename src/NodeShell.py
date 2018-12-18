@@ -135,7 +135,7 @@ class NodeShell(Cmd):
 
             print("Node is authenticated on the BITCOM network.")
             print("IP: {}".format(self.node.ip))
-            print("Balance: {} BTM".format(self.node.balance))
+            print("Balance: {} BTM".format(self.node.ledger[self.node.ip]))
 
         else:
 

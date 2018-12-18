@@ -102,13 +102,7 @@ class BitcopTransaction(Bitcop):
             elif self.code == Bitcop.TRAN_EX:
 
                 # Data is a Transaction
-                data_dict = {'idx': self.data.idx,
-                             'payer': self.data.payer,
-                             'payee': self.data.payee,
-                             'amount': self.data.amount,
-                             'ledger': self.data.ledger,
-                             'timestamp': self.data.timestamp}
-                data = dumps(data_dict).encode('utf-8')
+                data = dumps(self.data.get_json()).encode('utf-8')
 
             length = Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE + len(data)
             length_bytes = length.to_bytes(Bitcop.NUMBER_BYTES_LENGTH, byteorder)

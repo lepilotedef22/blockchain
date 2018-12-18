@@ -54,7 +54,6 @@ class Transaction:
                                                    available=available_amount)
 
             # Updating the ledger
-
             self.ledger = {}
             for user in prev_ledger:
 
@@ -80,3 +79,18 @@ class Transaction:
             self.amount = transaction_json['amount']
             self.timestamp = transaction_json['timestamp']
             self.ledger = transaction_json['ledger']
+
+    # --------------------------------------------------- METHODS --------------------------------------------------- #
+
+    def get_json(self) -> Dict:
+        """
+        Returns the attributes of the object as a json
+        :return: json with the attributes
+        """
+
+        return {'idx': self.idx,
+                'payer': self.payer,
+                'payee': self.payee,
+                'amount': self.amount,
+                'ledger': self.ledger,
+                'timestamp': self.timestamp}
