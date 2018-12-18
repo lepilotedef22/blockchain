@@ -49,6 +49,15 @@ class Bitcop(ABC):
 
     TRAN: List[int] = [TRAN_ID, TRAN_NN, TRAN_EX, TRAN_ABORT]
 
+    # Block
+
+    BLOCK_ID: int = 30  # Message block id
+    BLOCK_NN: int = 31  # Message is block no need
+    BLOCK_EX: int = 32  # Message is block exchange
+    BLOCK_ABORT: int = 33  # Message is abort block sending
+
+    BLOCK: List[int] = [BLOCK_ID, BLOCK_NN, BLOCK_EX, BLOCK_ABORT]
+
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CONSTANTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
     NUMBER_BYTES_LENGTH: int = 2  # Number of bytes used to represent the length of the messages
