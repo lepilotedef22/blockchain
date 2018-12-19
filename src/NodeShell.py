@@ -99,14 +99,22 @@ class NodeShell(Cmd):
 
         payee = pay_args['ip']
         amount = pay_args['amount']
-        try:
+        print("{}% transaction fees.".format(Node.TRANSACTION_FEES * 100))
+        print("It will cost you {} BTM".format(amount + Node.TRANSACTION_FEES * amount))
+        cond = input("Do you agree? Y(es)\n")
+        if cond.upper() == "Y":
 
-            self.node.submit_transaction(payee, amount)
-            print("Transaction submitted to the network.")
+            try:
 
-        except TransactionNotValidException as e:
+                self.node.submit_transaction(payee, amount)
+                print("Transaction submitted to the network.")
 
-            logging.warning(e.message)
+            except TransactionNotValidException as e:
+
+                logging.warning(e.message)
+
+        else:
+            print("Transaction aborted...")
 
     def do_status(self, arg) -> None:
         """

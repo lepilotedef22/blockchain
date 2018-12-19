@@ -22,6 +22,8 @@ class Node(Thread):
     Class representing a node of the network.
     """
 
+    TRANSACTION_FEES: float = 0.01  # Fees used to pay the miners
+
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
