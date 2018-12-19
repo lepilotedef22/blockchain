@@ -62,7 +62,7 @@ class BitcopAuthenticate(Bitcop):
                 # Invalid code for Authentication
                 raise CodeNotValidException(code=code, valid_codes=Bitcop.AUTH)
 
-            if code == Bitcop.AUTH_REQ or code == Bitcop.AUTH_ABORT:
+            if code == Bitcop.AUTH_REQ:
 
                 # Data is a string
                 data = parsed_msg['data'].decode('utf-8')
@@ -93,7 +93,7 @@ class BitcopAuthenticate(Bitcop):
 
             # New message to be sent
             data = None
-            if self.code == Bitcop.AUTH_ABORT or self.code == Bitcop.AUTH_REQ:
+            if self.code == Bitcop.AUTH_REQ:
 
                 # Data is a string
                 data = self.data.encode('utf-8')

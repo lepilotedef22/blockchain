@@ -11,20 +11,16 @@ from random import getrandbits
 from time import time
 from json import dumps
 from hashlib import sha256
-from src import Transaction
-from src import BlockNotValidException
+from src import Transaction, BlockNotValidException, Bitcop
 
 
 # ------------------------------------------------------ TYPES ------------------------------------------------------ #
 
 
 class Block:
-
     """
     Class dealing with the Blccks
     """
-
-    NUMBER_BYTES_NONCE: int = 8
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
@@ -55,7 +51,7 @@ class Block:
             self.idx: int = idx
             self.prev_hash: bytes = prev_hash
             self.transaction_list: List[Transaction] = transaction_list
-            self.nonce: int = getrandbits(8 * self.NUMBER_BYTES_NONCE)
+            self.nonce: int = getrandbits(8 * Bitcop.NUMBER_BYTES_NONCE)
             self.timestamp: float = time()
 
             self.cur_hash = self.block_calculation()

@@ -14,9 +14,8 @@ __date__ = "17.12.2018"
 
 class BitcopBlock(Bitcop):
     """
-    Class dealing with transaction messages. Codes: 20: TRAN_ID: transaction id
-                                                    21: TRAN_NN: transaction no need
-                                                    22: TRAN_EX: transaction exchange
+    Class dealing with transaction messages. Codes: 20: BLOCK_ID: block id
+                                                    21: BLOCK_EX: block exchange
     """
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
@@ -50,23 +49,16 @@ class BitcopBlock(Bitcop):
             parsed_msg = parse_bytes_stream_from_message(data_rcv,
                                                          Bitcop.NUMBER_BYTES_LENGTH,
                                                          Bitcop.NUMBER_BYTES_CODE)
-
             code = parsed_msg['code']
-
             if code not in Bitcop.BLOCK:
 
-                # Invalid code for Transaction
+                # Invalid code for Block
                 raise CodeNotValidException(code=code, valid_codes=Bitcop.BLOCK)
 
             elif code == Bitcop.BLOCK_ID:
 
                 # Data is a int
                 data = int.from_bytes(parsed_msg['data'], byteorder)
-
-            elif code == Bitcop.BLOCK_NN:
-
-                # Data is a string
-                data = parsed_msg['data'].decode('utf-8')
 
             elif code == Bitcop.BLOCK_EX:
 
@@ -93,11 +85,6 @@ class BitcopBlock(Bitcop):
 
                 # Data is a int
                 data = self.data.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder)
-
-            elif self.code == Bitcop.BLOCK_NN or self.code == Bitcop.BLOCK_ABORT:
-
-                # Data is a string
-                data = self.data.encode('utf-8')
 
             elif self.code == Bitcop.BLOCK_EX:
 

@@ -15,8 +15,7 @@ __date__ = "17.12.2018"
 class BitcopTransaction(Bitcop):
     """
     Class dealing with transaction messages. Codes: 20: TRAN_ID: transaction id
-                                                    21: TRAN_NN: transaction no need
-                                                    22: TRAN_EX: transaction exchange
+                                                    21: TRAN_EX: transaction exchange
     """
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
@@ -63,11 +62,6 @@ class BitcopTransaction(Bitcop):
                 # Data is a int
                 data = int.from_bytes(parsed_msg['data'], byteorder)
 
-            elif code == Bitcop.TRAN_NN:
-
-                # Data is a string
-                data = parsed_msg['data'].decode('utf-8')
-
             elif code == Bitcop.TRAN_EX:
 
                 # Data is a json
@@ -93,11 +87,6 @@ class BitcopTransaction(Bitcop):
 
                 # Data is a int
                 data = self.data.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder)
-
-            elif self.code == Bitcop.TRAN_NN or self.code == Bitcop.TRAN_ABORT:
-
-                # Data is a string
-                data = self.data.encode('utf-8')
 
             elif self.code == Bitcop.TRAN_EX:
 

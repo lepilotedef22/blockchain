@@ -13,7 +13,6 @@ __date__ = "09.12.2018"
 
 
 class Bitcop(ABC):
-
     """
     Super class dealing with the messages used to communicate in the Bitcop protocol. It possesses class constants
     relative to each type of message supported by the protocol. It will be inherited to differentiate different kinds of
@@ -36,27 +35,22 @@ class Bitcop(ABC):
     AUTH_CHAL: int = 11  # Message is authenticate challenge
     AUTH_RESP: int = 12  # Message is authenticate response
     AUTH_OK: int = 13  # Message is authenticate OK
-    AUTH_ABORT: int = 14  # Message is abort authentication
 
-    AUTH: List[int] = [AUTH_REQ, AUTH_CHAL, AUTH_RESP, AUTH_OK, AUTH_ABORT]
+    AUTH: List[int] = [AUTH_REQ, AUTH_CHAL, AUTH_RESP, AUTH_OK]
 
     # Transaction
 
     TRAN_ID: int = 20  # Message transaction id
-    TRAN_NN: int = 21  # Message is transaction no need
-    TRAN_EX: int = 22  # Message is transaction exchange
-    TRAN_ABORT: int = 23  # Message is abort transaction
+    TRAN_EX: int = 21  # Message is transaction exchange
 
-    TRAN: List[int] = [TRAN_ID, TRAN_NN, TRAN_EX, TRAN_ABORT]
+    TRAN: List[int] = [TRAN_ID, TRAN_EX]
 
     # Block
 
     BLOCK_ID: int = 30  # Message block id
-    BLOCK_NN: int = 31  # Message is block no need
-    BLOCK_EX: int = 32  # Message is block exchange
-    BLOCK_ABORT: int = 33  # Message is abort block sending
+    BLOCK_EX: int = 31  # Message is block exchange
 
-    BLOCK: List[int] = [BLOCK_ID, BLOCK_NN, BLOCK_EX, BLOCK_ABORT]
+    BLOCK: List[int] = [BLOCK_ID, BLOCK_EX]
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CONSTANTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
