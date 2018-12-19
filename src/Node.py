@@ -3,7 +3,7 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from typing import List, Dict
+from typing import List, Dict, Tuple, Union
 from threading import Thread, Lock
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive, Transaction, \
     TransactionNotValidException, BitcopTransaction
@@ -72,8 +72,8 @@ class Node(Thread):
                 closing_socket.send(b'')
 
     def __handle_request(self,
-                         peer_socket,
-                         peer_address
+                         peer_socket: socket,
+                         peer_address: Tuple[Union[str, int]]
                          ) -> None:
         """
         Method running on its own thread to handle peer's requests
@@ -112,7 +112,7 @@ class Node(Thread):
                     for idx in range(last_idx, peer_transaction_idx + 1):
 
                         logging.debug("Receiving transaction with expected idx {}".format(idx))
-                        transaction_exch_message = receive(peer_socket)
+                        transaction_exch_message: BitcopTransaction = receive(peer_socket)
                         logging.debug("Received transaction with expected idx {}".format(idx))
                         transaction_exch_code = transaction_exch_message.get_request()['code']
                         logging.debug("Code of the transaction message: {}".format(transaction_exch_code))
@@ -135,13 +135,20 @@ class Node(Thread):
                                 # Sending received transaction to neighbours
                                 try:
 
-                                    logging.debug("Sending transaction from {} to peer at {}".format(self.ip, peer_ip))
+                                    logging.debug("Sending transaction from {} to peer at {}".format(self.ip,
+                                                                                                     peer_ip))
                                     self.__send_transaction(peer_ip)
 
                                 except RuntimeError:
 
                                     logging.debug("Communication broken while sending transaction from {} to peer"
                                                   " at {}".format(self.ip, peer_ip))
+                else:
+
+                    logging.debug("Transaction not needed, sending TRAN_NN from {} to {}".format(self.ip,
+                                                                                                 peer_address[0]))
+                    transaction_no_need = BitcopTransaction(Bitcop.TRAN_NN, 'nn')
+                    send(peer_socket, transaction_no_need)
 
         except RuntimeError:
 
@@ -236,7 +243,7 @@ class Node(Thread):
                 logging.debug("Peer at {}:{} is contacting listener".format(peer_address[0],
                                                                             peer_address[1]))
 
-                if peer_address in self.peers:
+                if peer_address[0] in self.peers:
 
                     # Starting a thread to handle the request
                     request_handling_thread = Thread(target=self.__handle_request,
@@ -301,21 +308,21 @@ class Node(Thread):
                                              last_idx)
                 logging.info("Latest transaction idx: {}".format(last_idx))
 
-                logging.debug("Sending transaction idx to peer")
+                logging.debug("Sending transaction idx to peer at {}".format(peer_ip))
                 send(snd_socket, tran_idx)
-                logging.debug("Transaction idx sent to peer")
+                logging.debug("Transaction idx sent to peer at {}".format(peer_ip))
 
                 # Receive last transaction idx of the peer
-                logging.debug("Receiving last transaction idx from peer")
+                logging.debug("Receiving last transaction idx from peer at {}".format(peer_ip))
                 tran_idx_peer = receive(snd_socket)
-                logging.debug("Received last transaction from peer")
+                logging.debug("Received last transaction from peer at {}".format(peer_ip))
                 tran_idx_peer_code = tran_idx_peer.get_request()['code']
-                logging.info("Last transaction idx message code: {}".format(tran_idx_peer_code))
+                logging.info("Latest transaction idx message code: {}".format(tran_idx_peer_code))
 
                 if tran_idx_peer_code == Bitcop.TRAN_ID:
 
                     last_idx_peer = tran_idx_peer.get_request()['data']
-                    logging.info("Last transaction idx of peer: {}".format(last_idx_peer))
+                    logging.info("Latest transaction idx of peer: {}".format(last_idx_peer))
 
                     with Lock():
 
@@ -324,8 +331,10 @@ class Node(Thread):
 
                     # Send required transactions
                     # Assuming that only the pending transactions need to be synced
-                    for idx in range(last_idx_peer + 1, last_idx + 1):
+                    for idx in range(last_idx_peer, last_idx + 1):
+
                         with Lock():
+
                             snd_transaction = self.pending_transactions[idx - first_idx_pending]
 
                         transaction_message = BitcopTransaction(Bitcop.TRAN_EX,
@@ -333,6 +342,11 @@ class Node(Thread):
                         logging.debug("Sending transaction with idx: {} to peer".format(idx - first_idx_pending))
                         send(snd_socket, transaction_message)
                         logging.debug("Transaction with idx: {} sent to peer".format(idx - first_idx_pending))
+
+                elif tran_idx_peer_code == Bitcop.TRAN_NN:
+
+                    # Peer does not need the transactions
+                    logging.debug("Peer does not need the transactions")
 
         except RuntimeError:
 

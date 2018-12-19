@@ -42,8 +42,9 @@ class Bitcop(ABC):
 
     TRAN_ID: int = 20  # Message transaction id
     TRAN_EX: int = 21  # Message is transaction exchange
+    TRAN_NN: int = 22  # Message is transaction no-need
 
-    TRAN: List[int] = [TRAN_ID, TRAN_EX]
+    TRAN: List[int] = [TRAN_ID, TRAN_EX, TRAN_NN]
 
     # Block
 

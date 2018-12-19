@@ -7,6 +7,7 @@ from src import Bitcop, CodeNotValidException, Transaction, parse_bytes_stream_f
 from typing import Optional, Union
 from sys import byteorder
 from json import loads, dumps
+import logging
 
 
 __date__ = "17.12.2018"
@@ -16,6 +17,7 @@ class BitcopTransaction(Bitcop):
     """
     Class dealing with transaction messages. Codes: 20: TRAN_ID: transaction id
                                                     21: TRAN_EX: transaction exchange
+                                                    22: TRAN_NN: transaction no-need
     """
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
@@ -67,6 +69,11 @@ class BitcopTransaction(Bitcop):
                 # Data is a json
                 data = Transaction(transaction_json=loads(parsed_msg['data'].decode('utf-8')))
 
+            elif code == Bitcop.TRAN_NN:
+
+                # Data is str
+                data = parsed_msg['data'].decode('utf-8')
+
             super().__init__(code, data_rcv)
             self.data = data
 
@@ -92,6 +99,11 @@ class BitcopTransaction(Bitcop):
 
                 # Data is a Transaction
                 data = dumps(self.data.get_json()).encode('utf-8')
+
+            elif self.code == Bitcop.TRAN_NN:
+
+                # Data is str
+                data = self.data.encode('utf-8')
 
             length = Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE + len(data)
             length_bytes = length.to_bytes(Bitcop.NUMBER_BYTES_LENGTH, byteorder)
