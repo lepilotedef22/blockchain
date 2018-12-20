@@ -6,7 +6,7 @@
 from typing import List, Dict, Tuple, Union
 from threading import Thread, Lock
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive, Transaction, \
-    TransactionNotValidException, BitcopTransaction, min_args
+    TransactionNotValidException, BitcopTransaction, min_args, Block
 from socket import socket
 from hashlib import sha256
 from sys import byteorder
@@ -305,7 +305,10 @@ class Node(Thread):
             transactions_to_mine.append(miner_transaction)
 
             # Creating a block with the transactions
+            block_mined = Block(idx=self.blockchain.get_last_block().idx+1, prev_hash=self.blockchain.get_last_block().cur_hash,
+                                transaction_list=transactions_to_mine)
 
+            # Broadcast block
 
 
             # End of mining loop

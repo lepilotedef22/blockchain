@@ -11,7 +11,7 @@ from src import Block
 
 # For types
 
-from typing import List, Optional
+from typing import List
 
 
 class Blockchain:
@@ -72,7 +72,7 @@ class Blockchain:
             return self.blockchain[index_1: index_2]
 
     def get_transactions(self, target_ip: str) -> List[str]:
-        transaction_list: Optional[List[str]] = None
+        transaction_list: List[str] = None
         for block in self.blockchain:
             for transaction in block.transaction_list:
                 if transaction.payer == target_ip:

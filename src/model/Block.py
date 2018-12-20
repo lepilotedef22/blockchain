@@ -19,7 +19,7 @@ from src import Transaction, BlockNotValidException, Bitcop
 
 class Block:
     """
-    Class dealing with the Blccks
+    Class dealing with the Blocks
     """
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
