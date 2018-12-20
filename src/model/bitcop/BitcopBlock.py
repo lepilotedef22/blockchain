@@ -3,32 +3,30 @@
 
 #  IMPORTS  #
 
-from src import Bitcop, CodeNotValidException, Transaction, parse_bytes_stream_from_message
+from src import Bitcop, CodeNotValidException, Block, parse_bytes_stream_from_message
 from typing import Optional, Union
 from sys import byteorder
 from json import loads, dumps
-import logging
 
 
 __date__ = "17.12.2018"
 
 
-class BitcopTransaction(Bitcop):
+class BitcopBlock(Bitcop):
     """
-    Class dealing with transaction messages. Codes: 20: TRAN_ID: transaction id
-                                                    21: TRAN_EX: transaction exchange
-                                                    22: TRAN_NN: transaction no-need
+    Class dealing with transaction messages. Codes: 20: BLOCK_ID: block id
+                                                    21: BLOCK_EX: block exchange
     """
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
                  code: Optional[int] = None,
-                 data: Optional[Union[int, str, Transaction]] = None,
+                 data: Optional[Union[int, str, Block]] = None,
                  data_rcv: Optional[bytes] = None
                  ) -> None:
         """
-        Constructor of the BitcopTransaction
+        Constructor of the BitcopBlock
         :param code: code of the message sent in the Bitcop protocol, None if the object is based on an incoming stream
             of bytes
         :param data: data transmitted, None if the object is based on an incoming stream of bytes
@@ -38,9 +36,9 @@ class BitcopTransaction(Bitcop):
         if data_rcv is None:
 
             # Message created for a TX request -> code and data are assumed to be not None
-            if code not in Bitcop.TRAN:
+            if code not in Bitcop.BLOCK:
                 # Invalid code for Transaction
-                raise CodeNotValidException(code=code, valid_codes=Bitcop.TRAN)
+                raise CodeNotValidException(code=code, valid_codes=Bitcop.BLOCK)
 
             super().__init__(code, data_rcv)
             self.data = data
@@ -51,28 +49,21 @@ class BitcopTransaction(Bitcop):
             parsed_msg = parse_bytes_stream_from_message(data_rcv,
                                                          Bitcop.NUMBER_BYTES_LENGTH,
                                                          Bitcop.NUMBER_BYTES_CODE)
-
             code = parsed_msg['code']
+            if code not in Bitcop.BLOCK:
 
-            if code not in Bitcop.TRAN:
+                # Invalid code for Block
+                raise CodeNotValidException(code=code, valid_codes=Bitcop.BLOCK)
 
-                # Invalid code for Transaction
-                raise CodeNotValidException(code=code, valid_codes=Bitcop.TRAN)
-
-            elif code == Bitcop.TRAN_ID:
+            elif code == Bitcop.BLOCK_ID:
 
                 # Data is a int
                 data = int.from_bytes(parsed_msg['data'], byteorder)
 
-            elif code == Bitcop.TRAN_EX:
+            elif code == Bitcop.BLOCK_EX:
 
                 # Data is a json
-                data = Transaction(transaction_json=loads(parsed_msg['data'].decode('utf-8')))
-
-            elif code == Bitcop.TRAN_NN:
-
-                # Data is str
-                data = parsed_msg['data'].decode('utf-8')
+                data = Block(block_json=loads(parsed_msg['data'].decode('utf-8')))
 
             super().__init__(code, data_rcv)
             self.data = data
@@ -90,20 +81,15 @@ class BitcopTransaction(Bitcop):
 
             # New message to be sent
             data = None
-            if self.code == Bitcop.TRAN_ID:
+            if self.code == Bitcop.BLOCK_ID:
 
                 # Data is a int
                 data = self.data.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder)
 
-            elif self.code == Bitcop.TRAN_EX:
+            elif self.code == Bitcop.BLOCK_EX:
 
                 # Data is a Transaction
                 data = dumps(self.data.get_json()).encode('utf-8')
-
-            elif self.code == Bitcop.TRAN_NN:
-
-                # Data is str
-                data = self.data.encode('utf-8')
 
             length = Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE + len(data)
             length_bytes = length.to_bytes(Bitcop.NUMBER_BYTES_LENGTH, byteorder)

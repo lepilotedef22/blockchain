@@ -8,7 +8,7 @@ This module contains all the functions helping with the operation of sockets
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
 from socket import socket
-from src import Bitcop, BitcopAuthenticate
+from src import Bitcop, BitcopAuthenticate, BitcopTransaction
 from sys import byteorder
 
 
@@ -82,3 +82,8 @@ def receive(sock: socket
 
         # Authenticate message
         return BitcopAuthenticate(data_rcv=data)
+
+    elif code // 10 == 2:
+
+        # Transaction message
+        return BitcopTransaction(data_rcv=data)

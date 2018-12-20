@@ -11,7 +11,7 @@ This module contains the helping functions used to simplify the communication cl
 
 # For types
 
-from typing import Dict
+from typing import Dict, List
 
 # For formatting
 
@@ -121,3 +121,30 @@ def parse_bytes_stream_from_message(msg: bytes,
 
     return {"code": code,
             "data": data}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ FORMATTING DICO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+
+def min_args(dico: Dict) -> List:
+    """
+    Finds the keys that minimise the value of a dictionary
+    Credit:
+    https://stackoverflow.com/questions/3282823/get-the-key-corresponding-to-the-minimum-value-within-a-dictionary
+    :param dico: dictionary to be studied
+    :return: list containing the minimising keys
+    """
+
+    positions = []
+    min_value = float("inf")
+    for k, v in dico.items():
+
+        if v == min_value:
+
+            positions.append(k)
+
+        if v < min_value:
+
+            min_value = v
+            positions = [k]
+
+    return positions

@@ -16,6 +16,9 @@ class Transaction:
     Class dealing with transactions
     """
 
+    TRANSACTION_FEES: float = 0.01  # Fees used to pay the miners
+    BLOCK_MINED: float = 5.0  # Money offered to poorest user when a block is mined
+
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
@@ -43,32 +46,51 @@ class Transaction:
             self.idx: int = idx
             self.payer: str = payer
             self.payee: str = payee
-            self.amount: float = amount
             self.timestamp: float = time()  # Time in EPOCH format
 
-            available_amount = prev_ledger[self.payer]
-            if self.amount > available_amount:
+            if self.payer is not None:
 
-                # Over-spending check
-                raise TransactionNotValidException(spent=amount,
-                                                   available=available_amount)
+                # Transaction from node to node, fees are added
+                self.amount: float = amount * (1 + self.TRANSACTION_FEES)
 
-            # Updating the ledger
+                available_amount = prev_ledger[self.payer]
+                if self.amount > available_amount:
+                    # Over-spending check
+                    raise TransactionNotValidException(spent=amount,
+                                                       available=available_amount)
 
-            self.ledger = {}
-            for user in prev_ledger:
+                # Updating the ledger
+                self.ledger = {}
+                for user in prev_ledger:
 
-                if user == self.payer:
+                    if user == self.payer:
 
-                    self.ledger[user] = prev_ledger[user] - self.amount
+                        self.ledger[user] = prev_ledger[user] - self.amount
 
-                elif user == self.payee:
+                    elif user == self.payee:
 
-                    self.ledger[user] = prev_ledger[user] + self.amount
+                        self.ledger[user] = prev_ledger[user] + self.amount / (1 + self.TRANSACTION_FEES)
 
-                else:
+                    else:
 
-                    self.ledger[user] = prev_ledger[user]
+                        self.ledger[user] = prev_ledger[user]
+
+            else:
+
+                # Transaction from network to node, when a block is mined
+                self.amount = amount
+
+                # Updating the ledger
+                self.ledger = {}
+                for user in prev_ledger:
+
+                    if user == self.payee:
+
+                        self.ledger[user] = prev_ledger[user] + self.amount
+
+                    else:
+
+                        self.ledger[user] = prev_ledger[user]
 
         else:
 
@@ -80,3 +102,34 @@ class Transaction:
             self.amount = transaction_json['amount']
             self.timestamp = transaction_json['timestamp']
             self.ledger = transaction_json['ledger']
+
+    # --------------------------------------------------- METHODS --------------------------------------------------- #
+
+    def get_json(self) -> Dict:
+        """
+        Returns the attributes of the object as a json
+        :return: json with the attributes
+        """
+
+        return {'idx': self.idx,
+                'payer': self.payer,
+                'payee': self.payee,
+                'amount': self.amount,
+                'ledger': self.ledger,
+                'timestamp': self.timestamp}
+
+    def get_fees(self) -> float:
+        """
+        Returns the fees of a transaction
+        :return: Transaction.TRANSACTION_FEES * amount
+        """
+
+        if self.payer is not None:
+
+            # Transaction from node to node
+            return (self.amount * self.TRANSACTION_FEES) / (1 + self.TRANSACTION_FEES)
+
+        else:
+
+            # Transaction from network to node, no fees
+            return 0

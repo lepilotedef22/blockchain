@@ -3,15 +3,16 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from typing import List, Dict
+from typing import List, Dict, Tuple, Union
 from threading import Thread, Lock
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive, Transaction, \
-    TransactionNotValidException
+    TransactionNotValidException, BitcopTransaction, min_args
 from socket import socket
 from hashlib import sha256
 from sys import byteorder
 from time import sleep
 import logging
+from copy import deepcopy
 
 
 __date__ = "07.12.2018"
@@ -42,17 +43,16 @@ class Node(Thread):
         self.secret: str = config['registration']['secret']
         self.neighbours_ip: List[str] = config['neighbours']
 
+        # Other attributes
         self.server_port: int = 5001  # Arbitrary, given in the assignment
         self.blockchain: Blockchain = Blockchain()
         self.authenticated: bool = False  # Authenticated to the network ?
-        self.nodes: List[str] = None  # IP of all the nodes on the network
-        self.server_socket: socket = None  # Server socket of the node
-        self.balance = 0
-        self.is_serving = False  # Node IP is serving ?
+        self.peers: List[str] = None  # IP of all the peers on the network
+        self.is_listening = False  # Node IP is serving ?
         self.is_mining = False  # Node is mining ?
-        self.transaction_idx: int = 0  # Index of the last transaction
+        self.transaction_idx: int = 0  # Index of the next transaction entering the node
         self.pending_transactions: List[Transaction] = []  # List of transactions waiting to be mined into a block
-        self.ledger: Dict[str, float] = None  # Amount on the accounts of all the users
+        self.ledger: Dict[str, float] = None  # Amount on the accounts of all the users {ip, balance}
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
@@ -65,7 +65,99 @@ class Node(Thread):
 
             # Shutting down the threads
             self.is_mining = False
-            self.is_serving = False
+            self.is_listening = False
+
+            # Shutting down node listener (avoid being stuck in accept mode)
+            with socket() as closing_socket:
+
+                closing_socket.connect((self.ip, self.server_port))
+                closing_socket.send(b'')
+
+    def __handle_request(self,
+                         peer_socket: socket,
+                         peer_address: Tuple[Union[str, int]]
+                         ) -> None:
+        """
+        Method running on its own thread to handle peer's requests
+        :param peer_socket: socket to communicate with the peer
+        :param peer_address: address (ip, port) of the peer
+        """
+
+        try:
+
+            peer_request: Bitcop = receive(peer_socket)
+            peer_request_code = peer_request.get_request()['code']
+            logging.info("First peer request code: {}".format(peer_request_code))
+
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TRANSACTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+            # Peer transaction idx
+            if peer_request_code == Bitcop.TRAN_ID:
+
+                peer_transaction_idx = peer_request.get_request()['data']
+                logging.info("Peer transaction idx: {}".format(peer_transaction_idx))
+
+                with Lock():
+
+                    last_idx = self.transaction_idx
+
+                logging.info("Last transaction idx: {}".format(last_idx))
+
+                if last_idx <= peer_transaction_idx:
+
+                    # Node needs transaction(s) from peer
+                    transaction_idx_message = BitcopTransaction(Bitcop.TRAN_ID,
+                                                                last_idx)
+                    logging.debug("Sending last transaction idx of node to peer")
+                    send(peer_socket, transaction_idx_message)
+                    logging.debug("Last transaction idx of node sent to peer")
+                    for idx in range(last_idx, peer_transaction_idx + 1):
+
+                        logging.debug("Receiving transaction with expected idx {}".format(idx))
+                        transaction_exch_message: BitcopTransaction = receive(peer_socket)
+                        logging.debug("Received transaction with expected idx {}".format(idx))
+                        transaction_exch_code = transaction_exch_message.get_request()['code']
+                        logging.debug("Code of the transaction message: {}".format(transaction_exch_code))
+                        transaction = transaction_exch_message.get_request()['data']
+                        logging.debug("Received transaction idx: {}".format(transaction.idx))
+                        if transaction_exch_code == Bitcop.TRAN_EX and transaction.idx == idx:
+
+                            with Lock():
+
+                                # Updating args
+                                self.pending_transactions.append(transaction)
+                                self.transaction_idx += 1
+                                self.ledger = transaction.ledger
+                                logging.info("Ledger and pending transactions updated with transaction {}".format(
+                                    transaction.idx
+                                ))
+
+                            for peer_ip in self.neighbours_ip:
+
+                                # Sending received transaction to neighbours
+                                try:
+
+                                    logging.debug("Sending transaction from {} to peer at {}".format(self.ip,
+                                                                                                     peer_ip))
+                                    self.__send_transaction(peer_ip)
+
+                                except RuntimeError:
+
+                                    logging.debug("Communication broken while sending transaction from {} to peer"
+                                                  " at {}".format(self.ip, peer_ip))
+                else:
+
+                    logging.debug("Transaction not needed, sending TRAN_NN from {} to {}".format(self.ip,
+                                                                                                 peer_address[0]))
+                    transaction_no_need = BitcopTransaction(Bitcop.TRAN_NN, 'nn')
+                    send(peer_socket, transaction_no_need)
+
+        except RuntimeError:
+
+            logging.info("Socket communication between listener {}:{} and peer {}:{} broken".format(self.ip,
+                                                                                                    self.server_port,
+                                                                                                    peer_address[0],
+                                                                                                    peer_address[1]))
 
     def __authenticate(self,
                        snd_socket: socket
@@ -84,105 +176,86 @@ class Node(Thread):
         try:
 
             # Request
-
             request = BitcopAuthenticate(Bitcop.AUTH_REQ,
                                          self.username)
             send(snd_socket, request)
 
             # Challenge
-
             auth_challenge = receive(snd_socket)
             chal_code = auth_challenge.get_request()['code']
 
-            if chal_code == Bitcop.AUTH_ABORT:
+            if chal_code == Bitcop.AUTH_CHAL:
 
-                # Server aborted the operation
-                return
+                nonce = auth_challenge.get_request()['data']
 
-            elif chal_code != Bitcop.AUTH_CHAL:
+                # Response
+                hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + self.secret.encode('utf-8')
+                resp_data = [self.username, sha256(hash_arg).hexdigest()]
 
-                # Code does not match that of a challenge
-                abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
-                                               'abort')
-                send(snd_socket, abort_req)
-                return
+                response = BitcopAuthenticate(Bitcop.AUTH_RESP,
+                                              resp_data)
+                send(snd_socket, response)
 
-            nonce = auth_challenge.get_request()['data']
+                # OK
+                auth_ok = receive(snd_socket)
+                ok_code = auth_ok.get_request()['code']
 
-            # Response
+                if ok_code == Bitcop.AUTH_OK:
 
-            hash_arg = nonce.to_bytes(Bitcop.NUMBER_BYTES_NONCE, byteorder) + self.secret.encode('utf-8')
-            resp_data = [self.username, sha256(hash_arg).hexdigest()]
-
-            response = BitcopAuthenticate(Bitcop.AUTH_RESP,
-                                          resp_data)
-            send(snd_socket, response)
-
-            # OK
-
-            auth_ok = receive(snd_socket)
-            ok_code = auth_ok.get_request()['code']
-
-            if ok_code == Bitcop.AUTH_OK:
-
-                # Node successfully authenticated
-                self.authenticated = True  # Stopping the authentication loop
-                self.nodes = auth_ok.get_request()['data']
-                self.ledger = {ip: 0 for ip in self.nodes}  # Initializing balance of each user to 0 BTM
-                self.nodes.remove(self.ip)  # Removing own ip address from list of other users ip
-                logging.info("Node {} successfully authenticated on the Bitcom network".format(self.username))
-
-            elif ok_code == Bitcop.AUTH_ABORT:
-
-                # Server aborted the operation
-                return
-
-            else:
-
-                # Code does not match that of an auth_ok
-                abort_req = BitcopAuthenticate(Bitcop.AUTH_ABORT,
-                                               'abort')
-                send(snd_socket, abort_req)
-                return
+                    # Node successfully authenticated
+                    self.authenticated = True  # Stopping the authentication loop
+                    self.peers = auth_ok.get_request()['data']
+                    self.ledger = {ip: 10 for ip in self.peers}  # Initializing balance of each user to 10 BTM
+                    self.peers.remove(self.ip)  # Removing own ip address from list of other users ip
+                    logging.info("Node {} successfully authenticated on the Bitcom network".format(self.username))
 
         except RuntimeError:
             logging.error("Socket communication broken at node {}:{}".format(self.ip,
                                                                              self.authenticate_ip))
-            return
 
-    def __serve_forever(self) -> None:
+    def __listen_forever(self) -> None:
         """
-        Method running in the server thread.
+        Method running in the listening process
         """
 
-        with socket() as node_server:
+        with socket() as node_listener:
 
             # Creating a socket with default mode: IPv4/TCP
             is_bound = False
             while not is_bound:
 
                 try:
-                    node_server.bind((self.ip, self.server_port))
+                    node_listener.bind((self.ip, self.server_port))
                     is_bound = True
-                    self.server_socket = node_server
+                    logging.info("Node listener bound to {}:{}".format(self.ip, self.server_port))
 
                 except OSError:
-                    logging.info("Address {}:{} already used".format(self.ip, self.server_port))
+                    logging.debug("Address {}:{} already used".format(self.ip, self.server_port))
                     sleep(1)  # Waiting one second before attempting to bind again
 
+            node_listener.listen(5)  # Queue up to 5 connection requests
+            logging.debug("Node at {}:{} is listening".format(self.ip, self.server_port))
+
             with Lock():
-                serving_condition: bool = self.is_serving
+                listening_condition: bool = self.is_listening
 
-            while serving_condition:
+            while listening_condition:
 
-                # Serve...
+                peer_socket, peer_address = node_listener.accept()
+                logging.debug("Peer at {}:{} is contacting listener".format(peer_address[0],
+                                                                            peer_address[1]))
+
+                if peer_address[0] in self.peers:
+
+                    # Starting a thread to handle the request
+                    request_handling_thread = Thread(target=self.__handle_request,
+                                                     args=[peer_socket,
+                                                           peer_address])
+                    request_handling_thread.start()
 
                 # End of loop
                 with Lock():
-                    serving_condition: bool = self.is_serving
-
-        # Returning from thread once the job is done
-        return
+                    listening_condition = self.is_listening
 
     def __mine(self) -> None:
         """
@@ -195,15 +268,131 @@ class Node(Thread):
 
         while mining_condition:
 
-            # Mine...
+            with Lock():
+
+                transactions_to_mine = deepcopy(self.pending_transactions)
+                ledger = self.ledger
+                idx = self.transaction_idx
+
+            # First, adding Transaction.BLOCK_MINED BTM to poorest nodes
+
+            poorest_users: List = min_args(ledger)  # IPs of the poorest users
+            for user in poorest_users:
+
+                transaction = Transaction(idx=idx,
+                                          payee=user,
+                                          amount=Transaction.BLOCK_MINED / len(poorest_users),
+                                          prev_ledger=ledger)
+                ledger = transaction.ledger
+                idx += 1
+                transactions_to_mine.append(transaction)
+
+            # Paying miner with transaction fees
+
+            fees = 0  # Total transaction fees accumulated
+
+            for transaction in transactions_to_mine:
+
+                fees += transaction.get_fees()
+
+            miner_transaction = Transaction(idx=idx,
+                                            payee=self.ip,
+                                            amount=fees,
+                                            prev_ledger=transactions_to_mine[-1].ledger)
+
+            ledger = miner_transaction.ledger
+            idx += 1
+            transactions_to_mine.append(miner_transaction)
+
+            # Creating a block with the transactions
+
+
 
             # End of mining loop
-
             with Lock():
                 mining_condition = self.is_mining
 
-        # Returning from thread once the job is done
-        return
+    def __send_transaction(self,
+                           peer_ip: str
+                           ) -> None:
+        """
+        Sends the transaction to the neighbour at neighbour_ip
+        :param peer_ip: ip where transaction must be sent
+        """
+
+        try:
+
+            with socket() as snd_socket:
+
+                # Creating a socket with default mode: IPv4/TCP
+                logging.debug("Peer receiving transaction: {}".format(peer_ip,
+                                                                      self.server_port))
+
+                try:
+
+                    snd_socket.bind((self.ip, 0))  # OS takes care of free port allocation
+                    snd_socket.connect((peer_ip, self.server_port))
+
+                except OSError:
+                    logging.info("Could not connect to peer at {}:{}".format(peer_ip,
+                                                                             self.server_port))
+                    return
+
+                # Send transaction idx
+                with Lock():
+
+                    last_idx = self.pending_transactions[-1].idx
+
+                tran_idx = BitcopTransaction(Bitcop.TRAN_ID,
+                                             last_idx)
+                logging.info("Latest transaction idx: {}".format(last_idx))
+
+                logging.debug("Sending transaction idx to peer at {}".format(peer_ip))
+                send(snd_socket, tran_idx)
+                logging.debug("Transaction idx sent to peer at {}".format(peer_ip))
+
+                # Receive last transaction idx of the peer
+                logging.debug("Receiving last transaction idx from peer at {}".format(peer_ip))
+                tran_idx_peer = receive(snd_socket)
+                logging.debug("Received last transaction from peer at {}".format(peer_ip))
+                tran_idx_peer_code = tran_idx_peer.get_request()['code']
+                logging.info("Latest transaction idx message code: {}".format(tran_idx_peer_code))
+
+                if tran_idx_peer_code == Bitcop.TRAN_ID:
+
+                    last_idx_peer = tran_idx_peer.get_request()['data']
+                    logging.info("Latest transaction idx of peer: {}".format(last_idx_peer))
+
+                    with Lock():
+
+                        first_idx_pending = self.pending_transactions[0].idx
+                        logging.debug("idx of the first pending transaction: {}".format(first_idx_pending))
+
+                    # Send required transactions
+                    # Assuming that only the pending transactions need to be synced
+                    for idx in range(last_idx_peer, last_idx + 1):
+
+                        with Lock():
+
+                            snd_transaction = self.pending_transactions[idx - first_idx_pending]
+
+                        transaction_message = BitcopTransaction(Bitcop.TRAN_EX,
+                                                                snd_transaction)
+                        logging.debug("Sending transaction with idx: {} to peer".format(idx - first_idx_pending))
+                        send(snd_socket, transaction_message)
+                        logging.debug("Transaction with idx: {} sent to peer".format(idx - first_idx_pending))
+
+                elif tran_idx_peer_code == Bitcop.TRAN_NN:
+
+                    # Peer does not need the transactions
+                    logging.debug("Peer does not need the transactions")
+
+        except RuntimeError:
+
+                logging.info("Socket communication broken while sending transactions to peer at {}:{}".format(
+                    peer_ip,
+                    self.server_port
+                ))
 
     def submit_transaction(self,
                            payee: str,
@@ -218,28 +407,45 @@ class Node(Thread):
         if self.authenticated:
 
             # Required to be authenticated to submit a transaction
-
-            if payee in self.nodes:
+            if payee in self.peers:
 
                 # Payee is valid
-                transaction: Transaction = Transaction(self.transaction_idx,
-                                                       self.ip,
-                                                       payee,
-                                                       amount,
-                                                       self.ledger)  # Exception raised if amount > balance
                 with Lock():
 
-                    self.ledger = transaction.ledger  # Updating the ledger
+                    transaction_idx = self.transaction_idx
+                    payer = self.ip
+                    ledger = self.ledger
+
+                transaction: Transaction = Transaction(transaction_idx,
+                                                       payer,
+                                                       payee,
+                                                       amount,
+                                                       ledger)  # Exception raised if amount > balance
+                with Lock():
+
+                    # Updating args
+                    self.ledger = transaction.ledger
                     self.pending_transactions.append(transaction)
+                    self.transaction_idx += 1
+                    logging.debug("Ledger and pending transactions updated")
 
-                # TODO: send transaction
+                # Sending transaction to neighbours
+                for peer_ip in self.neighbours_ip:
 
-                logging.info(self.pending_transactions)
+                    try:
+
+                        logging.debug("Sending transaction to peer {}".format(peer_ip))
+                        self.__send_transaction(peer_ip)
+
+                    except RuntimeError:
+
+                        logging.warning("Transaction with index {} could not be sent to {}".format(transaction.idx,
+                                                                                                   peer_ip))
 
             else:
 
                 # Invalid payee
-                raise TransactionNotValidException(nodes=self.nodes)
+                raise TransactionNotValidException(nodes=self.peers)
 
         else:
 
@@ -261,20 +467,17 @@ class Node(Thread):
         with socket() as auth_client:
 
             # Creating a socket with default mode: IPv4/TCP
-            is_bound = False
             auth_server_address = (self.authenticate_ip,
                                    self.server_port)
-            while not is_bound:
 
-                try:
-                    auth_client.bind((self.ip, 0))  # OS takes care of free port allocation
-                    auth_client.connect(auth_server_address)
-                    is_bound = True
+            try:
+                auth_client.bind((self.ip, 0))  # OS takes care of free port allocation
+                auth_client.connect(auth_server_address)
 
-                except OSError:
-                    logging.info("Server at {}:{} cannot be reached".format(self.authenticate_ip,
-                                                                                self.server_port))
-                    return
+            except OSError:
+                logging.info("Server at {}:{} cannot be reached".format(self.authenticate_ip,
+                                                                        self.server_port))
+                return
 
             while not self.authenticated:
                 # Trying to be authenticated on the network
@@ -283,11 +486,11 @@ class Node(Thread):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SERVER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
         # Creating and starting the server thread
-        server_thread = Thread(target=self.__serve_forever)
+        listening_thread = Thread(target=self.__listen_forever)
         with Lock():
-            self.is_serving = True
+            self.is_listening = True
 
-        server_thread.start()
+        listening_thread.start()
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MINING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 

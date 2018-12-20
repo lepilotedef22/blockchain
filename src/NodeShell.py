@@ -3,7 +3,7 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from src import Node, TransactionNotValidException
+from src import Node, TransactionNotValidException, Transaction
 from cmd import Cmd
 import logging
 from argparse import ArgumentParser
@@ -99,14 +99,22 @@ class NodeShell(Cmd):
 
         payee = pay_args['ip']
         amount = pay_args['amount']
-        try:
+        print("{}% transaction fees.".format(Transaction.TRANSACTION_FEES * 100))
+        print("It will cost you {} BTM".format(amount + Transaction.TRANSACTION_FEES * amount))
+        cond = input("Do you agree? Y(es)\n")
+        if cond.upper() == "Y":
 
-            self.node.submit_transaction(payee, amount)
-            print("Transaction submitted to the network.")
+            try:
 
-        except TransactionNotValidException as e:
+                self.node.submit_transaction(payee, amount)
+                print("Transaction submitted to the network.")
 
-            logging.warning(e.message)
+            except TransactionNotValidException as e:
+
+                logging.warning(e.message)
+
+        else:
+            print("Transaction aborted...")
 
     def do_status(self, arg) -> None:
         """
@@ -135,7 +143,7 @@ class NodeShell(Cmd):
 
             print("Node is authenticated on the BITCOM network.")
             print("IP: {}".format(self.node.ip))
-            print("Balance: {} BTM".format(self.node.balance))
+            print("Balance: {} BTM".format(self.node.ledger[self.node.ip]))
 
         else:
 
