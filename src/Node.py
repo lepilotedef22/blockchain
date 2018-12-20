@@ -6,7 +6,7 @@
 from typing import List, Dict, Tuple, Union
 from threading import Thread, Lock
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive, Transaction, \
-    TransactionNotValidException, BitcopTransaction, min_args, Block
+    TransactionNotValidException, BitcopTransaction, min_args, Block, BitcopBlock
 from socket import socket
 from hashlib import sha256
 from sys import byteorder
@@ -151,6 +151,37 @@ class Node(Thread):
                                                                                                  peer_address[0]))
                     transaction_no_need = BitcopTransaction(Bitcop.TRAN_NN, 'nn')
                     send(peer_socket, transaction_no_need)
+
+            elif peer_request_code == Bitcop.BLOCK_ID:
+
+                peer_block_idx = peer_request.get_request()['data']
+
+
+                with Lock():
+
+                    last_idx = self.blockchain.get_last_block().idx
+
+                if last_idx <= peer_block_idx:
+
+                    block_idx_message = BitcopTransaction(Bitcop.BLOCK_ID, last_idx)
+                    send(peer_socket, block_idx_message)
+
+                    for idx in range(last_idx, peer_block_idx+1):
+                        block_exch_message : BitcopBlock = receive(peer_socket)
+                        block_exch_code = block_exch_message.get_request()['code']
+                        block = block_exch_message.get_request()['data']
+
+                        if block_exch_code == Bitcop.BLOCK_EX and block.idx == idx:
+                            with Lock():
+                                self.blockchain.add(block)
+                            for peer_ip in self.neighbours_ip:
+                                try:
+                                    self.__send_block(peer_ip)
+                                except RuntimeError:
+                                    return
+                else:
+                    block_no_need = BitcopBlock(Bitcop.BLOCK_NN, 'nn')
+                    send(peer_socket, block_no_need)
 
         except RuntimeError:
 
@@ -308,12 +339,93 @@ class Node(Thread):
             block_mined = Block(idx=self.blockchain.get_last_block().idx+1, prev_hash=self.blockchain.get_last_block().cur_hash,
                                 transaction_list=transactions_to_mine)
 
+            # Add to own Block List
+
+            self.blockchain.add(block_mined)
+
             # Broadcast block
 
+            self.__submit_block()
 
             # End of mining loop
             with Lock():
                 mining_condition = self.is_mining
+
+    def __send_block(self,
+                           peer_ip: str
+                           ) -> None:
+        """
+        Sends the block to the neighbour at neighbour_ip
+        :param peer_ip: ip where block must be sent
+        """
+
+        try:
+
+            with socket() as snd_socket:
+
+
+                try:
+
+                    snd_socket.bind((self.ip, 0))
+                    snd_socket.connect((peer_ip, self.server_port))
+
+                except OSError:
+                    return
+
+                with Lock():
+
+                    last_idx = self.blockchain.get_last_block().idx
+
+                block_idx = BitcopBlock(Bitcop.BLOCK_ID, last_idx)
+
+                send(snd_socket, block_idx)
+
+                # Receive last block idx of the peer
+
+                block_idx_peer = receive(snd_socket)
+
+                block_idx_peer_code = block_idx_peer.get_request()['code']
+
+                if block_idx_peer_code == Bitcop.BLOCK_ID:
+
+                    last_idx_peer = block_idx_peer.get_request()['data']
+
+
+                    with Lock():
+
+                        first_idx = self.blockchain[0].idx
+
+                    for idx in range(last_idx_peer, last_idx + 1):
+
+                        with Lock():
+
+                            snd_block = self.blockchain[idx - first_idx]
+
+                            block_message = BitcopTransaction(Bitcop.BLOCK_NN, snd_block)
+
+                            send(snd_socket, block_message)
+
+                elif block_idx_peer_code == Bitcop.BLOCK_NN:
+                    return
+                    # Peer does not need the transactions
+        except RuntimeError:
+            return
+
+
+    def __submit_block(self) -> None:
+
+        """
+        Submits a new block to the network.
+        """
+
+        if self.authenticated:
+
+            for peer_ip in self.neighbours_ip:
+                try:
+                    self.__send_block(peer_ip)
+                except RuntimeError:
+                    logging.warning("Block with index {} could not be sent to {}".format(self.blockchain.get_last_block().idx, peer_ip))
+
 
     def __send_transaction(self,
                            peer_ip: str

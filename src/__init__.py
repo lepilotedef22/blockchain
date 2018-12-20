@@ -11,6 +11,7 @@ from src.model.Exceptions.TranscationNotValidException import TransactionNotVali
 from src.model.Transaction import Transaction
 from src.model.bitcop.BitcopAuthenticate import BitcopAuthenticate
 from src.model.bitcop.BitcopTransaction import BitcopTransaction
+from src.model.bitcop.BitcopBlock import BitcopBlock
 from src.model.utils.SocketHelper import *
 from src.model.Block import Block
 from src.model.Blockchain import Blockchain
