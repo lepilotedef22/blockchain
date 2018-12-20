@@ -6,12 +6,13 @@
 from typing import List, Dict, Tuple, Union
 from threading import Thread, Lock
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive, Transaction, \
-    TransactionNotValidException, BitcopTransaction
+    TransactionNotValidException, BitcopTransaction, min_args
 from socket import socket
 from hashlib import sha256
 from sys import byteorder
 from time import sleep
 import logging
+from copy import deepcopy
 
 
 __date__ = "07.12.2018"
@@ -267,10 +268,47 @@ class Node(Thread):
 
         while mining_condition:
 
+            with Lock():
+
+                transactions_to_mine = deepcopy(self.pending_transactions)
+                ledger = self.ledger
+                idx = self.transaction_idx
+
+            # First, adding Transaction.BLOCK_MINED BTM to poorest nodes
+
+            poorest_users: List = min_args(ledger)  # IPs of the poorest users
+            for user in poorest_users:
+
+                transaction = Transaction(idx=idx,
+                                          payee=user,
+                                          amount=Transaction.BLOCK_MINED / len(poorest_users),
+                                          prev_ledger=ledger)
+                ledger = transaction.ledger
+                idx += 1
+                transactions_to_mine.append(transaction)
+
+            # Paying miner with transaction fees
+
+            fees = 0  # Total transaction fees accumulated
+
+            for transaction in transactions_to_mine:
+
+                fees += transaction.get_fees()
+
+            miner_transaction = Transaction(idx=idx,
+                                            payee=self.ip,
+                                            amount=fees,
+                                            prev_ledger=transactions_to_mine[-1].ledger)
+
+            ledger = miner_transaction.ledger
+            idx += 1
+            transactions_to_mine.append(miner_transaction)
+
+            # Creating a block with the transactions
+
 
 
             # End of mining loop
-
             with Lock():
                 mining_condition = self.is_mining
 

@@ -117,3 +117,19 @@ class Transaction:
                 'amount': self.amount,
                 'ledger': self.ledger,
                 'timestamp': self.timestamp}
+
+    def get_fees(self) -> float:
+        """
+        Returns the fees of a transaction
+        :return: Transaction.TRANSACTION_FEES * amount
+        """
+
+        if self.payer is not None:
+
+            # Transaction from node to node
+            return (self.amount * self.TRANSACTION_FEES) / (1 + self.TRANSACTION_FEES)
+
+        else:
+
+            # Transaction from network to node, no fees
+            return 0
