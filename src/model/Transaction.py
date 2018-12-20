@@ -16,6 +16,9 @@ class Transaction:
     Class dealing with transactions
     """
 
+    TRANSACTION_FEES: float = 0.01  # Fees used to pay the miners
+    BLOCK_MINED: float = 5.0  # Money offered to poorest user when a block is mined
+
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
@@ -43,31 +46,51 @@ class Transaction:
             self.idx: int = idx
             self.payer: str = payer
             self.payee: str = payee
-            self.amount: float = amount
             self.timestamp: float = time()  # Time in EPOCH format
 
-            available_amount = prev_ledger[self.payer]
-            if self.amount > available_amount:
+            if self.payer is not None:
 
-                # Over-spending check
-                raise TransactionNotValidException(spent=amount,
-                                                   available=available_amount)
+                # Transaction from node to node, fees are added
+                self.amount: float = amount * (1 + self.TRANSACTION_FEES)
 
-            # Updating the ledger
-            self.ledger = {}
-            for user in prev_ledger:
+                available_amount = prev_ledger[self.payer]
+                if self.amount > available_amount:
+                    # Over-spending check
+                    raise TransactionNotValidException(spent=amount,
+                                                       available=available_amount)
 
-                if user == self.payer:
+                # Updating the ledger
+                self.ledger = {}
+                for user in prev_ledger:
 
-                    self.ledger[user] = prev_ledger[user] - self.amount
+                    if user == self.payer:
 
-                elif user == self.payee:
+                        self.ledger[user] = prev_ledger[user] - self.amount
 
-                    self.ledger[user] = prev_ledger[user] + self.amount
+                    elif user == self.payee:
 
-                else:
+                        self.ledger[user] = prev_ledger[user] + self.amount / (1 + self.TRANSACTION_FEES)
 
-                    self.ledger[user] = prev_ledger[user]
+                    else:
+
+                        self.ledger[user] = prev_ledger[user]
+
+            else:
+
+                # Transaction from network to node, when a block is mined
+                self.amount = amount
+
+                # Updating the ledger
+                self.ledger = {}
+                for user in prev_ledger:
+
+                    if user == self.payee:
+
+                        self.ledger[user] = prev_ledger[user] + self.amount
+
+                    else:
+
+                        self.ledger[user] = prev_ledger[user]
 
         else:
 

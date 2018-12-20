@@ -22,8 +22,6 @@ class Node(Thread):
     Class representing a node of the network.
     """
 
-    TRANSACTION_FEES: float = 0.01  # Fees used to pay the miners
-
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 
     def __init__(self,
@@ -44,6 +42,7 @@ class Node(Thread):
         self.secret: str = config['registration']['secret']
         self.neighbours_ip: List[str] = config['neighbours']
 
+        # Other attributes
         self.server_port: int = 5001  # Arbitrary, given in the assignment
         self.blockchain: Blockchain = Blockchain()
         self.authenticated: bool = False  # Authenticated to the network ?
@@ -268,7 +267,7 @@ class Node(Thread):
 
         while mining_condition:
 
-            # Mine...
+
 
             # End of mining loop
 
@@ -373,11 +372,17 @@ class Node(Thread):
             if payee in self.peers:
 
                 # Payee is valid
-                transaction: Transaction = Transaction(self.transaction_idx,
-                                                       self.ip,
+                with Lock():
+
+                    transaction_idx = self.transaction_idx
+                    payer = self.ip
+                    ledger = self.ledger
+
+                transaction: Transaction = Transaction(transaction_idx,
+                                                       payer,
                                                        payee,
                                                        amount,
-                                                       self.ledger)  # Exception raised if amount > balance
+                                                       ledger)  # Exception raised if amount > balance
                 with Lock():
 
                     # Updating args

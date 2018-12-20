@@ -3,7 +3,7 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from src import Node, TransactionNotValidException
+from src import Node, TransactionNotValidException, Transaction
 from cmd import Cmd
 import logging
 from argparse import ArgumentParser
@@ -99,8 +99,8 @@ class NodeShell(Cmd):
 
         payee = pay_args['ip']
         amount = pay_args['amount']
-        print("{}% transaction fees.".format(Node.TRANSACTION_FEES * 100))
-        print("It will cost you {} BTM".format(amount + Node.TRANSACTION_FEES * amount))
+        print("{}% transaction fees.".format(Transaction.TRANSACTION_FEES * 100))
+        print("It will cost you {} BTM".format(amount + Transaction.TRANSACTION_FEES * amount))
         cond = input("Do you agree? Y(es)\n")
         if cond.upper() == "Y":
 
