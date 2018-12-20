@@ -156,7 +156,6 @@ class Node(Thread):
 
                 peer_block_idx = peer_request.get_request()['data']
 
-
                 with Lock():
 
                     last_idx = self.blockchain.get_last_block().idx
@@ -174,6 +173,16 @@ class Node(Thread):
                         if block_exch_code == Bitcop.BLOCK_EX and block.idx == idx:
                             with Lock():
                                 self.blockchain.add(block)
+                            last_transaction_idx = block.transaction_list[-1].idx
+
+                            # Remove mined transactions from pending list
+
+                            for transaction in self.pending_transactions:
+                                if transaction.idx <= last_transaction_idx:
+                                    self.pending_transactions.remove(transaction)
+
+                            # Broadcast to other peers
+
                             for peer_ip in self.neighbours_ip:
                                 try:
                                     self.__send_block(peer_ip)
@@ -340,6 +349,8 @@ class Node(Thread):
                                 transaction_list=transactions_to_mine)
 
             # Add to own Block List
+
+            self.pending_transactions.clear()
 
             self.blockchain.add(block_mined)
 
