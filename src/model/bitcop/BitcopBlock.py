@@ -14,7 +14,7 @@ __date__ = "17.12.2018"
 
 class BitcopBlock(Bitcop):
     """
-    Class dealing with transaction messages. Codes: 30: BLOCK_ID: block id
+    Class dealing with blockchain messages. Codes: 30: BLOCK_ID: block id
                                                     31: BLOCK_EX: block exchange
                                                     32: BLOCK_NN: block not needed
     """
@@ -38,7 +38,7 @@ class BitcopBlock(Bitcop):
 
             # Message created for a TX request -> code and data are assumed to be not None
             if code not in Bitcop.BLOCK:
-                # Invalid code for Transaction
+                # Invalid code for Block
                 raise CodeNotValidException(code=code, valid_codes=Bitcop.BLOCK)
 
             super().__init__(code, data_rcv)

@@ -100,7 +100,7 @@ class NodeShell(Cmd):
         payee = pay_args['ip']
         amount = pay_args['amount']
         print("{}% transaction fees.".format(Transaction.TRANSACTION_FEES * 100))
-        print("It will cost you {} BTM".format(amount + Transaction.TRANSACTION_FEES * amount))
+        print("It will cost you {:.2f} BTM".format(amount + Transaction.TRANSACTION_FEES * amount))
         cond = input("Do you agree? Y(es)\n")
         if cond.upper() == "Y":
 
@@ -143,7 +143,7 @@ class NodeShell(Cmd):
 
             print("Node is authenticated on the BITCOM network.")
             print("IP: {}".format(self.node.ip))
-            print("Balance: {} BTM".format(self.node.ledger[self.node.ip]))
+            print("Balance: {:.2f} BTM".format(self.node.ledger[self.node.ip]))
 
         else:
 

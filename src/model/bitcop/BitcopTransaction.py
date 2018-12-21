@@ -7,7 +7,6 @@ from src import Bitcop, CodeNotValidException, Transaction, parse_bytes_stream_f
 from typing import Optional, Union
 from sys import byteorder
 from json import loads, dumps
-import logging
 
 
 __date__ = "17.12.2018"

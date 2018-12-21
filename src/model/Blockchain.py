@@ -26,7 +26,9 @@ class Blockchain:
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
-    def add(self, new_block: Block) -> None:
+    def add(self,
+            new_block: Block
+            ) -> None:
         """
         Adds a new block at the end of the chain
         :param new_block: block to be added
@@ -35,13 +37,21 @@ class Blockchain:
 
         self.chain.append(new_block)
 
-    def get_last_block(self) -> Block:
+    def get_last_block(self) -> Optional[Block]:
         """
         Returns the last block of the chain
         :return: The last block of the chain
         """
 
-        return self.chain[-1]
+        if len(self.chain) == 0:
+
+            # Chain is empty, waiting for Big Bang Block to be added
+            return None
+
+        else:
+
+            # Chain not empty
+            return self.chain[-1]
 
     def get_blocks_between_indexes(self, index_1: int, index_2: int) -> List[Block]:
         """

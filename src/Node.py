@@ -166,7 +166,13 @@ class Node(Thread):
 
                 with Lock():
 
-                    latest_idx = self.blockchain.get_last_block().idx
+                    if self.blockchain.get_last_block() is not None:
+
+                        latest_idx = self.blockchain.get_last_block().idx + 1
+
+                    else:
+
+                        latest_idx = 0
 
                 logging.debug("__handle_request(): Block: Latest block idx: {}".format(latest_idx))
 
@@ -177,7 +183,7 @@ class Node(Thread):
                         peer_address[0],
                         peer_address[1]
                     ))
-                    block_idx_message = BitcopTransaction(Bitcop.BLOCK_ID, latest_idx)
+                    block_idx_message = BitcopBlock(Bitcop.BLOCK_ID, latest_idx)
                     send(peer_socket, block_idx_message)
                     logging.debug("__handle_request(): Block: Block idx sent")
 
@@ -204,9 +210,9 @@ class Node(Thread):
                                 self.blockchain.add(block)
                                 logging.debug("__handle_request(): Block: Block with idx: {} added to "
                                               "Blockchain".format(idx))
-                                self.transaction_idx = block.transaction[-1].idx + 1
+                                self.transaction_idx = block.transactions[-1].idx + 1
                                 self.pending_transactions.clear()
-                                self.ledger = block.transaction[-1].ledger
+                                self.ledger = block.transactions[-1].ledger
                                 logging.debug("__handle_request(): Block: Transaction idx, pending transactions and "
                                               "ledger updated")
 
@@ -413,21 +419,35 @@ class Node(Thread):
 
             try:
 
+                with Lock():
+
+                    if self.blockchain.get_last_block() is not None:
+
+                        block_idx = self.blockchain.get_last_block().idx + 1
+                        prev_hash = self.blockchain.get_last_block().hash
+
+                    else:
+
+                        # Initial conditions for the blocks
+
+                        block_idx = 0
+                        prev_hash = ""
+
                 # Creating a block with the transactions
-                block_mined = Block(idx=self.blockchain.get_last_block().idx+1,
-                                    prev_hash=self.blockchain.get_last_block().hash,
+                block_mined = Block(idx=block_idx,
+                                    prev_hash=prev_hash,
                                     transactions=transactions_to_mine)
                 logging.debug("__mine(): New block with idx: {}".format(block_mined.idx))
-                print("__mine(): New block is mined. You earned {} BTM".format(miner_transaction.amount))
+
+                # Add to own Block List
+                self.blockchain.add(block_mined)
+                logging.debug("__mine(): Block {} added to blockchain".format(block_mined.idx))
 
                 # Broadcast block
                 logging.debug("__mine(): Submitting block {}".format(block_mined.idx))
                 self.__submit_block()
                 logging.debug("__mine(): Block submitted {}".format(block_mined.idx))
 
-                # Add to own Block List
-                self.blockchain.add(block_mined)
-                logging.debug("__mine(): Block {} added to blockchain".format(block_mined.idx))
                 with Lock():
 
                     self.ledger = ledger
@@ -487,7 +507,7 @@ class Node(Thread):
                 # Receive last block idx from peer
                 logging.debug("__send_block(): Receiving last block idx from peer at {}".format(peer_ip))
                 block_idx_peer = receive(snd_socket)
-                logging.debug("__send_block(): Received last block from peer at {}".format(peer_ip))
+                logging.debug("__send_block(): Received last block idx from peer at {}".format(peer_ip))
                 block_idx_peer_code = block_idx_peer.get_request()['code']
                 logging.debug("__send_block(): Peer block idx message code: {} from peer at {}".format(
                     block_idx_peer_code,
@@ -513,7 +533,7 @@ class Node(Thread):
 
                             snd_block = self.blockchain.chain[idx]
 
-                        block_message = BitcopTransaction(Bitcop.BLOCK_EX, snd_block)
+                        block_message = BitcopBlock(Bitcop.BLOCK_EX, snd_block)
                         logging.debug("__send_block(): Sending block with idx: {} to peer at {}".format(idx,
                                                                                                         peer_ip))
                         send(snd_socket, block_message)
@@ -540,8 +560,11 @@ class Node(Thread):
 
             for peer_ip in self.neighbours_ip:
 
-                logging.debug("Try to send the block with index {} to its neighbours".format(
-                    self.blockchain.get_last_block().idx))
+                with Lock():
+
+                    idx = self.blockchain.get_last_block().idx
+
+                logging.debug("Try to send the block with index {} to its neighbours".format(idx))
                 self.__send_block(peer_ip)
 
         else:
