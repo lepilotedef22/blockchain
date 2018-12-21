@@ -469,7 +469,6 @@ class Node(Thread):
             return
 
     def __submit_block(self) -> None:
-
         """
         Submits a new block to the network.
         """
@@ -477,11 +476,25 @@ class Node(Thread):
         if self.authenticated:
 
             for peer_ip in self.neighbours_ip:
-                logging.debug("Try to send the block with index {} to its neighbours".format(self.blockchain.get_last_block().idx))
+
+                logging.debug("Try to send the block with index {} to its neighbours".format(
+                    self.blockchain.get_last_block().idx))
+
                 try:
+
                     self.__send_block(peer_ip)
+
                 except RuntimeError:
-                    logging.warning("Block with index {} could not be sent to {}".format(self.blockchain.get_last_block().idx, peer_ip))
+
+                    logging.warning("Communication socket broken with {} while sending block with idx: {}".format(
+                        peer_ip,
+                        self.blockchain.get_last_block().idx
+                    ))
+
+        else:
+
+            print("Not authenticated on the BITCOM network, cannot submit blocks.")
+            print("Please restart the program...")
 
     def __send_transaction(self,
                            peer_ip: str
