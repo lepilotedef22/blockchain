@@ -48,7 +48,9 @@ class Transaction:
             self.payee: str = payee
             self.timestamp: float = time()  # Time in EPOCH format
 
-            if self.payer is not None:
+            if payer is not None:
+
+                self.payer = payer
 
                 # Transaction from node to node, fees are added
                 self.amount: float = amount * (1 + self.TRANSACTION_FEES)
@@ -76,6 +78,8 @@ class Transaction:
                         self.ledger[user] = prev_ledger[user]
 
             else:
+
+                self.payer = ""
 
                 # Transaction from network to node, when a block is mined
                 self.amount = amount

@@ -1,21 +1,16 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__date__ = "04.12.2018"
-
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-# From module
-
 from src import Block
+from typing import List, Optional
 
-# For types
 
-from typing import List
+__date__ = "04.12.2018"
 
 
 class Blockchain:
-
     """
     This class deals with the Blockchain, ie the chain of blocks. It is encoded as a list of blocks
     """
@@ -27,32 +22,28 @@ class Blockchain:
         """
         Constructor of the blockchain
         """
-
-        self.blockchain = []
+        self.chain = []
 
     # --------------------------------------------------- METHODS --------------------------------------------------- #
 
     def add(self, new_block: Block) -> None:
-
         """
         Adds a new block at the end of the chain
         :param new_block: block to be added
         :return: None
         """
 
-        self.blockchain.append(new_block)
+        self.chain.append(new_block)
 
     def get_last_block(self) -> Block:
-
         """
         Returns the last block of the chain
         :return: The last block of the chain
         """
 
-        return self.blockchain[-1]
+        return self.chain[-1]
 
     def get_blocks_between_indexes(self, index_1: int, index_2: int) -> List[Block]:
-
         """
         Returns list of blocks of the blockchain between two indexes. If index_2 is greater than the length of the
         blockchain, the returned list stops at the last element of the blockchain
@@ -61,24 +52,42 @@ class Blockchain:
         :return: a list of blocks between the two indexes
         """
 
-        if index_2 > len(self.blockchain):
+        if index_2 > len(self.chain):
 
             # index_2 is bigger than the maximum possible value
 
-            return self.blockchain[index_1:]
+            return self.chain[index_1:]
 
         else:
 
-            return self.blockchain[index_1: index_2]
+            return self.chain[index_1: index_2]
 
-    def get_transactions(self, target_ip: str) -> List[str]:
-        transaction_list: List[str] = None
-        for block in self.blockchain:
-            for transaction in block.transaction_list:
+    def get_transactions(self,
+                         target_ip: str
+                         ) -> Optional[List[str]]:
+        """
+        Returns the list of the transactions to be displayed in the shell
+        :param target_ip: ip of interest
+        :return: the list of transactions formatted in a suitable way for display
+        """
+
+        transaction_list: List[str] = []
+        for block in self.chain:
+
+            for transaction in block.transactions:
+
                 if transaction.payer == target_ip:
-                    transaction_list.append("[-] " + transaction.payer + " -> " + transaction.payee + " " +
-                                            transaction.amount + " BTM: " + transaction.ledger[target_ip] + " BTM")
+
+                    transaction_list.append("[-] {} -> {} {} BTM: {} BTM".format(transaction.payer,
+                                                                                 transaction.payee,
+                                                                                 transaction.amount,
+                                                                                 transaction.ledger[target_ip]))
+
                 elif transaction.payee == target_ip:
-                    transaction_list.append("[+] " + transaction.payer + " -> " + transaction.payee + " " +
-                                            transaction.amount + " BTM: " + transaction.ledger[target_ip] + " BTM")
-        return transaction_list
+
+                    transaction_list.append("[+] {} -> {} {} BTM: {} BTM".format(transaction.payer,
+                                                                                 transaction.payee,
+                                                                                 transaction.amount,
+                                                                                 transaction.ledger[target_ip]))
+
+        return transaction_list.reverse()

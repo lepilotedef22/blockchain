@@ -6,7 +6,7 @@
 from typing import List, Dict, Tuple, Union
 from threading import Thread, Lock
 from src import parse_config_node, Blockchain, Bitcop, BitcopAuthenticate, send, receive, Transaction, \
-    TransactionNotValidException, BitcopTransaction, min_args, Block, BitcopBlock
+    TransactionNotValidException, BitcopTransaction, min_args, Block, BitcopBlock, BlockNotValidException
 from socket import socket
 from hashlib import sha256
 from sys import byteorder
@@ -308,6 +308,7 @@ class Node(Thread):
 
         while mining_condition:
 
+            logging.debug("Mining condition is {}".format(mining_condition))
             with Lock():
 
                 transactions_to_mine = deepcopy(self.pending_transactions)
@@ -317,15 +318,21 @@ class Node(Thread):
             # First, adding Transaction.BLOCK_MINED BTM to poorest nodes
 
             poorest_users: List = min_args(ledger)  # IPs of the poorest users
+            logging.debug("Poorest users are {}".format(poorest_users))
             for user in poorest_users:
 
                 transaction = Transaction(idx=idx,
                                           payee=user,
                                           amount=Transaction.BLOCK_MINED / len(poorest_users),
                                           prev_ledger=ledger)
+                logging.debug("Transaction for user {}: idx: {}, payee: {}, amount: {}".format(user,
+                                                                                               transaction.idx,
+                                                                                               transaction.payee,
+                                                                                               transaction.amount))
                 ledger = transaction.ledger
                 idx += 1
                 transactions_to_mine.append(transaction)
+                logging.debug("Transactions to be mined appended")
 
             # Paying miner with transaction fees
 
@@ -335,36 +342,50 @@ class Node(Thread):
 
                 fees += transaction.get_fees()
 
+            logging.debug("Total mining fees: {} BTM".format(fees))
             miner_transaction = Transaction(idx=idx,
                                             payee=self.ip,
                                             amount=fees,
                                             prev_ledger=transactions_to_mine[-1].ledger)
-
+            logging.debug("Transaction for miner {}: idx: {}, payee: {}, amount: {}".format(self.ip,
+                                                                                            miner_transaction.idx,
+                                                                                            miner_transaction.payee,
+                                                                                            miner_transaction.amount))
             ledger = miner_transaction.ledger
             idx += 1
             transactions_to_mine.append(miner_transaction)
+            logging.debug("Transactions to be mined appended")
 
-            # Creating a block with the transactions
-            block_mined = Block(idx=self.blockchain.get_last_block().idx+1, prev_hash=self.blockchain.get_last_block().cur_hash,
-                                transaction_list=transactions_to_mine)
+            try:
 
-            # Add to own Block List
+                # Creating a block with the transactions
+                block_mined = Block(idx=self.blockchain.get_last_block().idx+1,
+                                    prev_hash=self.blockchain.get_last_block().hash,
+                                    transactions=transactions_to_mine)
 
-            self.pending_transactions.clear()
+                # Broadcast block
+                self.__submit_block()
 
-            self.blockchain.add(block_mined)
+                # Add to own Block List
+                self.blockchain.add(block_mined)
+                with Lock():
 
-            # Broadcast block
+                    self.ledger = ledger
+                    self.transaction_idx = idx
+                    self.pending_transactions.clear()
 
-            self.__submit_block()
+            except BlockNotValidException as e:
+
+                # Hash of the block not valid for mining
+                logging.debug(e.message)
 
             # End of mining loop
             with Lock():
                 mining_condition = self.is_mining
 
     def __send_block(self,
-                           peer_ip: str
-                           ) -> None:
+                     peer_ip: str
+                     ) -> None:
         """
         Sends the block to the neighbour at neighbour_ip
         :param peer_ip: ip where block must be sent
@@ -376,7 +397,6 @@ class Node(Thread):
 
                 logging.debug("Peer receiving transaction: {}".format(peer_ip,
                                                                       self.server_port))
-
 
                 try:
 
@@ -415,14 +435,14 @@ class Node(Thread):
 
                     with Lock():
 
-                        first_idx = self.blockchain[0].idx
+                        first_idx = self.blockchain.chain[0].idx
                         logging.debug("idx of the first block: {}".format(first_idx))
 
                     for idx in range(last_idx_peer, last_idx + 1):
 
                         with Lock():
 
-                            snd_block = self.blockchain[idx - first_idx]
+                            snd_block = self.blockchain.chain[idx - first_idx]
 
                             block_message = BitcopTransaction(Bitcop.BLOCK_NN, snd_block)
 
