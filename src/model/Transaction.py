@@ -128,7 +128,7 @@ class Transaction:
         :return: Transaction.TRANSACTION_FEES * amount
         """
 
-        if self.payer is not None:
+        if self.payer != "":
 
             # Transaction from node to node
             return (self.amount * self.TRANSACTION_FEES) / (1 + self.TRANSACTION_FEES)

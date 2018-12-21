@@ -14,8 +14,9 @@ __date__ = "17.12.2018"
 
 class BitcopBlock(Bitcop):
     """
-    Class dealing with transaction messages. Codes: 20: BLOCK_ID: block id
-                                                    21: BLOCK_EX: block exchange
+    Class dealing with transaction messages. Codes: 30: BLOCK_ID: block id
+                                                    31: BLOCK_EX: block exchange
+                                                    32: BLOCK_NN: block not needed
     """
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
@@ -65,6 +66,11 @@ class BitcopBlock(Bitcop):
                 # Data is a json
                 data = Block(block_json=loads(parsed_msg['data'].decode('utf-8')))
 
+            elif code == Bitcop.BLOCK_NN:
+
+                # Data is str
+                data = parsed_msg['data'].decode('utf-8')
+
             super().__init__(code, data_rcv)
             self.data = data
 
@@ -88,8 +94,13 @@ class BitcopBlock(Bitcop):
 
             elif self.code == Bitcop.BLOCK_EX:
 
-                # Data is a Transaction
+                # Data is a Block
                 data = dumps(self.data.get_json()).encode('utf-8')
+
+            elif self.code == Bitcop.BLOCK_NN:
+
+                # Data is str
+                data = self.data.encode('utf-8')
 
             length = Bitcop.NUMBER_BYTES_LENGTH + Bitcop.NUMBER_BYTES_CODE + len(data)
             length_bytes = length.to_bytes(Bitcop.NUMBER_BYTES_LENGTH, byteorder)

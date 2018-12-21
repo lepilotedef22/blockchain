@@ -87,13 +87,15 @@ class Node(Thread):
 
             peer_request: Bitcop = receive(peer_socket)
             peer_request_code = peer_request.get_request()['code']
-            logging.debug("First peer request code: {}".format(peer_request_code))
+            logging.debug("__handle_request(): First request code: {} from peer at {}:{}".format(peer_request_code,
+                                                                                                 peer_address[0],
+                                                                                                 peer_address[1]))
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TRANSACTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-            # Peer transaction idx
             if peer_request_code == Bitcop.TRAN_ID:
 
+                # Peer transaction idx
                 peer_transaction_idx = peer_request.get_request()['data']
                 logging.debug("Peer transaction idx: {}".format(peer_transaction_idx))
 
@@ -152,52 +154,102 @@ class Node(Thread):
                     transaction_no_need = BitcopTransaction(Bitcop.TRAN_NN, 'nn')
                     send(peer_socket, transaction_no_need)
 
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ BLOCK ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
             elif peer_request_code == Bitcop.BLOCK_ID:
 
+                # Peer block idx
                 peer_block_idx = peer_request.get_request()['data']
+                logging.debug("__handle_request(): Block: Block idx:{} from peer at {}:{}".format(peer_block_idx,
+                                                                                                  peer_address[0],
+                                                                                                  peer_address[1]))
 
                 with Lock():
 
-                    last_idx = self.blockchain.get_last_block().idx
+                    latest_idx = self.blockchain.get_last_block().idx
 
-                if last_idx <= peer_block_idx:
+                logging.debug("__handle_request(): Block: Latest block idx: {}".format(latest_idx))
 
-                    block_idx_message = BitcopTransaction(Bitcop.BLOCK_ID, last_idx)
+                if latest_idx <= peer_block_idx:
+
+                    logging.debug("__handle_request(): Block: Sending latest block idx: {} to peer at {}:{}".format(
+                        latest_idx,
+                        peer_address[0],
+                        peer_address[1]
+                    ))
+                    block_idx_message = BitcopTransaction(Bitcop.BLOCK_ID, latest_idx)
                     send(peer_socket, block_idx_message)
+                    logging.debug("__handle_request(): Block: Block idx sent")
 
-                    for idx in range(last_idx, peer_block_idx+1):
+                    for idx in range(latest_idx, peer_block_idx + 1):
+
+                        logging.debug("__handle_request(): Block: Receiving block with idx: {} "
+                                      "from peer at {}:{}".format(idx,
+                                                                  peer_address[0],
+                                                                  peer_address[1]))
+
                         block_exch_message: BitcopBlock = receive(peer_socket)
+                        logging.debug("__handle_request(): Block: Block with idx: {} received".format(idx))
                         block_exch_code = block_exch_message.get_request()['code']
+                        logging.debug("__handle_request(): Block: Block with idx: {} message code: {}".format(
+                            idx,
+                            block_exch_code
+                        ))
                         block = block_exch_message.get_request()['data']
 
                         if block_exch_code == Bitcop.BLOCK_EX and block.idx == idx:
+
                             with Lock():
+
                                 self.blockchain.add(block)
-                            last_transaction_idx = block.transaction_list[-1].idx
-
-                            # Remove mined transactions from pending list
-
-                            for transaction in self.pending_transactions:
-                                if transaction.idx <= last_transaction_idx:
-                                    self.pending_transactions.remove(transaction)
+                                logging.debug("__handle_request(): Block: Block with idx: {} added to "
+                                              "Blockchain".format(idx))
+                                self.transaction_idx = block.transaction[-1].idx + 1
+                                self.pending_transactions.clear()
+                                self.ledger = block.transaction[-1].ledger
+                                logging.debug("__handle_request(): Block: Transaction idx, pending transactions and "
+                                              "ledger updated")
 
                             # Broadcast to other peers
-
                             for peer_ip in self.neighbours_ip:
+
+                                logging.debug("__handle_request(): Block: Forwarding block with idx: {} to neighbour"
+                                              "at {}".format(idx,
+                                                             peer_ip))
                                 try:
+
+                                    logging.debug("__handle_request(): Block: Sending block with idx: {} to neighbour"
+                                                  "at {}".format(idx,
+                                                                 peer_ip))
                                     self.__send_block(peer_ip)
+                                    logging.debug("__handle_request(): Block: Block with idx: {} sent".format(idx))
+
                                 except RuntimeError:
-                                    return
+
+                                    logging.debug("__handle_request(): Block: Communication broken while sending block"
+                                                  "with idx: {} to neighbour at {}".format(idx,
+                                                                                           peer_ip))
                 else:
+
+                    logging.debug("__handle_request(): Block: Block with idx: {} not needed".format(peer_block_idx))
+                    logging.debug("__handle_request(): Block: Sending to block not needed to peer at {}:{}".format(
+                        peer_address[0],
+                        peer_address[1]
+                    ))
                     block_no_need = BitcopBlock(Bitcop.BLOCK_NN, 'nn')
                     send(peer_socket, block_no_need)
+                    logging.debug("__handle_request(): Block: Block not-needed sent to peer at {}:{}".format(
+                        peer_address[0],
+                        peer_address[1]
+                    ))
 
         except RuntimeError:
 
-            logging.debug("Socket communication between listener {}:{} and peer {}:{} broken".format(self.ip,
-                                                                                                     self.server_port,
-                                                                                                     peer_address[0],
-                                                                                                     peer_address[1]))
+            logging.debug("__handle_request(): Socket communication between listener {}:{}"
+                          " and peer {}:{} broken".format(self.ip,
+                                                          self.server_port,
+                                                          peer_address[0],
+                                                          peer_address[1]))
 
     def __authenticate(self,
                        snd_socket: socket
@@ -317,21 +369,23 @@ class Node(Thread):
             # First, adding Transaction.BLOCK_MINED BTM to poorest nodes
 
             poorest_users: List = min_args(ledger)  # IPs of the poorest users
-            logging.debug("Poorest users are {}".format(poorest_users))
+            logging.debug("__mine(): Poorest users are {}".format(poorest_users))
             for user in poorest_users:
 
                 transaction = Transaction(idx=idx,
                                           payee=user,
                                           amount=Transaction.BLOCK_MINED / len(poorest_users),
                                           prev_ledger=ledger)
-                logging.debug("Transaction for user {}: idx: {}, payee: {}, amount: {}".format(user,
-                                                                                               transaction.idx,
-                                                                                               transaction.payee,
-                                                                                               transaction.amount))
+                logging.debug("__mine(): Transaction for user {}: idx: {}, payee: {}, amount: {}".format(
+                    user,
+                    transaction.idx,
+                    transaction.payee,
+                    transaction.amount
+                ))
                 ledger = transaction.ledger
                 idx += 1
                 transactions_to_mine.append(transaction)
-                logging.debug("Transactions to be mined appended")
+                logging.debug("__mine(): Transactions to be mined appended")
 
             # Paying miner with transaction fees
 
@@ -341,19 +395,21 @@ class Node(Thread):
 
                 fees += transaction.get_fees()
 
-            logging.debug("Total mining fees: {} BTM".format(fees))
+            logging.debug("__mine(): Total mining fees: {} BTM".format(fees))
             miner_transaction = Transaction(idx=idx,
                                             payee=self.ip,
                                             amount=fees,
                                             prev_ledger=transactions_to_mine[-1].ledger)
-            logging.debug("Transaction for miner {}: idx: {}, payee: {}, amount: {}".format(self.ip,
-                                                                                            miner_transaction.idx,
-                                                                                            miner_transaction.payee,
-                                                                                            miner_transaction.amount))
+            logging.debug("__mine(): Transaction for miner {}: idx: {}, payee: {}, amount: {}".format(
+                self.ip,
+                miner_transaction.idx,
+                miner_transaction.payee,
+                miner_transaction.amount
+            ))
             ledger = miner_transaction.ledger
             idx += 1
             transactions_to_mine.append(miner_transaction)
-            logging.debug("Transactions to be mined appended")
+            logging.debug("__mine(): Transactions to be mined appended")
 
             try:
 
@@ -361,24 +417,24 @@ class Node(Thread):
                 block_mined = Block(idx=self.blockchain.get_last_block().idx+1,
                                     prev_hash=self.blockchain.get_last_block().hash,
                                     transactions=transactions_to_mine)
-                logging.debug("New block with idx: {}".format(block_mined.idx))
-                print("New block is mined. You earned {} BTM".format(miner_transaction.amount))
+                logging.debug("__mine(): New block with idx: {}".format(block_mined.idx))
+                print("__mine(): New block is mined. You earned {} BTM".format(miner_transaction.amount))
 
                 # Broadcast block
-                logging.debug("Submitting block {}".format(block_mined.idx))
+                logging.debug("__mine(): Submitting block {}".format(block_mined.idx))
                 self.__submit_block()
-                logging.debug("Block submitted {}".format(block_mined.idx))
+                logging.debug("__mine(): Block submitted {}".format(block_mined.idx))
 
                 # Add to own Block List
                 self.blockchain.add(block_mined)
-                logging.debug("Block {} added to blockchain".format(block_mined.idx))
+                logging.debug("__mine(): Block {} added to blockchain".format(block_mined.idx))
                 with Lock():
 
                     self.ledger = ledger
                     self.transaction_idx = idx
                     self.pending_transactions.clear()
-                    logging.debug("Ledger, transaction idx and pending transactions updated")
-                    logging.debug("Transaction idx: {}".format(self.transaction_idx))
+                    logging.debug("__mine(): Ledger, transaction idx and pending transactions updated")
+                    logging.debug("__mine(): Transaction idx: {}".format(self.transaction_idx))
 
             except BlockNotValidException as e:
 
@@ -516,7 +572,7 @@ class Node(Thread):
 
                 except OSError:
                     logging.debug("Could not connect to peer at {}:{}".format(peer_ip,
-                                                                             self.server_port))
+                                                                              self.server_port))
                     return
 
                 # Send transaction idx

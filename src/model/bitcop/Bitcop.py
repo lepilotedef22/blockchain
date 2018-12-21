@@ -52,7 +52,7 @@ class Bitcop(ABC):
     BLOCK_EX: int = 31  # Message is block exchange
     BLOCK_NN: int = 32  # Message is block no-need
 
-    BLOCK: List[int] = [BLOCK_ID, BLOCK_EX]
+    BLOCK: List[int] = [BLOCK_ID, BLOCK_EX, BLOCK_NN]
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CONSTANTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
