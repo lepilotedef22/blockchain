@@ -401,72 +401,79 @@ class Node(Thread):
 
             with socket() as snd_socket:
 
-                logging.debug("Peer receiving transaction: {}".format(peer_ip,
-                                                                      self.server_port))
-
+                logging.debug("__send_block(): Peer receiving transaction: {}".format(peer_ip,
+                                                                                      self.server_port))
                 try:
 
                     snd_socket.bind((self.ip, 0))
                     snd_socket.connect((peer_ip, self.server_port))
+                    logging.debug("__send_block(): Connected to peer at {}:{}".format(peer_ip,
+                                                                                      self.server_port))
 
                 except OSError:
-                    logging.debug("Could not connect to peer at {}:{}".format(peer_ip,
-                                                                             self.server_port))
 
+                    logging.debug("__send_block(): Could not connect to peer at {}:{}".format(peer_ip,
+                                                                                              self.server_port))
                     return
 
                 with Lock():
 
                     last_idx = self.blockchain.get_last_block().idx
+                    logging.debug("__send_block(): Latest block idx: {} from peer at {}".format(last_idx,
+                                                                                                peer_ip))
 
+                # Send last block idx to peer
                 block_idx = BitcopBlock(Bitcop.BLOCK_ID, last_idx)
-
-                logging.debug("Latest block idx: {}".format(last_idx))
-
-                logging.debug("Sending block idx to peer at {}".format(peer_ip))
+                logging.debug("__send_block(): Sending block idx to peer at {}".format(peer_ip))
                 send(snd_socket, block_idx)
-                logging.debug("Block idx sent to peer at {}".format(peer_ip))
+                logging.debug("__send_block(): Block idx sent to peer at {}".format(peer_ip))
 
-                # Receive last block idx of the peer
-                logging.debug("Receiving last block idx from peer at {}".format(peer_ip))
+                # Receive last block idx from peer
+                logging.debug("__send_block(): Receiving last block idx from peer at {}".format(peer_ip))
                 block_idx_peer = receive(snd_socket)
-                logging.debug("Received last block from peer at {}".format(peer_ip))
+                logging.debug("__send_block(): Received last block from peer at {}".format(peer_ip))
                 block_idx_peer_code = block_idx_peer.get_request()['code']
-                logging.debug("Latest block idx message code: {}".format(block_idx_peer_code))
+                logging.debug("__send_block(): Peer block idx message code: {} from peer at {}".format(
+                    block_idx_peer_code,
+                    peer_ip
+                ))
 
                 if block_idx_peer_code == Bitcop.BLOCK_ID:
 
+                    # Send required blocks to peer
                     last_idx_peer = block_idx_peer.get_request()['data']
-                    logging.debug("Latest block idx of peer: {}".format(last_idx_peer))
+                    logging.debug("__send_block(): Latest block idx: {} from peer at {}".format(last_idx_peer,
+                                                                                                peer_ip))
 
                     with Lock():
 
-                        first_idx = self.blockchain.chain[0].idx
-                        logging.debug("idx of the first block: {}".format(first_idx))
+                        last_idx = self.blockchain.get_last_block().idx
+                        logging.debug("__send_block(): idx of the last block: {} from peer at {}".format(last_idx,
+                                                                                                         peer_ip))
 
                     for idx in range(last_idx_peer, last_idx + 1):
 
                         with Lock():
 
-                            snd_block = self.blockchain.chain[idx - first_idx]
+                            snd_block = self.blockchain.chain[idx]
 
-                            block_message = BitcopTransaction(Bitcop.BLOCK_NN, snd_block)
+                        block_message = BitcopTransaction(Bitcop.BLOCK_EX, snd_block)
+                        logging.debug("__send_block(): Sending block with idx: {} to peer at {}".format(idx,
+                                                                                                        peer_ip))
+                        send(snd_socket, block_message)
+                        logging.debug("__send_block(): Block with idx: {} sent to peer at {}".format(idx,
+                                                                                                     peer_ip))
 
-                            logging.debug("Sending block with idx: {} to peer".format(idx - first_idx))
-                            send(snd_socket, block_message)
-                            logging.debug("Block with idx: {} sent to peer".format(idx - first_idx))
                 elif block_idx_peer_code == Bitcop.BLOCK_NN:
 
-                    logging.debug("Peer does not need the block")
-                    return
-                    # Peer does not need the transactions
+                    logging.debug("__send_block(): Peer at {} does not need the block".format(peer_ip))
+
         except RuntimeError:
 
-            logging.debug("Socket communication broken while sending bloks to peer at {}:{}".format(
+            logging.debug("__send_block(): Socket communication broken while sending blocks to peer at {}:{}".format(
                 peer_ip,
                 self.server_port
             ))
-            return
 
     def __submit_block(self) -> None:
         """
@@ -479,17 +486,7 @@ class Node(Thread):
 
                 logging.debug("Try to send the block with index {} to its neighbours".format(
                     self.blockchain.get_last_block().idx))
-
-                try:
-
-                    self.__send_block(peer_ip)
-
-                except RuntimeError:
-
-                    logging.warning("Communication socket broken with {} while sending block with idx: {}".format(
-                        peer_ip,
-                        self.blockchain.get_last_block().idx
-                    ))
+                self.__send_block(peer_ip)
 
         else:
 
