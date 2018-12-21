@@ -87,7 +87,7 @@ class Node(Thread):
 
             peer_request: Bitcop = receive(peer_socket)
             peer_request_code = peer_request.get_request()['code']
-            logging.info("First peer request code: {}".format(peer_request_code))
+            logging.debug("First peer request code: {}".format(peer_request_code))
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TRANSACTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -95,13 +95,13 @@ class Node(Thread):
             if peer_request_code == Bitcop.TRAN_ID:
 
                 peer_transaction_idx = peer_request.get_request()['data']
-                logging.info("Peer transaction idx: {}".format(peer_transaction_idx))
+                logging.debug("Peer transaction idx: {}".format(peer_transaction_idx))
 
                 with Lock():
 
                     last_idx = self.transaction_idx
 
-                logging.info("Last transaction idx: {}".format(last_idx))
+                logging.debug("Last transaction idx: {}".format(last_idx))
 
                 if last_idx <= peer_transaction_idx:
 
@@ -128,7 +128,7 @@ class Node(Thread):
                                 self.pending_transactions.append(transaction)
                                 self.transaction_idx += 1
                                 self.ledger = transaction.ledger
-                                logging.info("Ledger and pending transactions updated with transaction {}".format(
+                                logging.debug("Ledger and pending transactions updated with transaction {}".format(
                                     transaction.idx
                                 ))
 
@@ -166,7 +166,7 @@ class Node(Thread):
                     send(peer_socket, block_idx_message)
 
                     for idx in range(last_idx, peer_block_idx+1):
-                        block_exch_message : BitcopBlock = receive(peer_socket)
+                        block_exch_message: BitcopBlock = receive(peer_socket)
                         block_exch_code = block_exch_message.get_request()['code']
                         block = block_exch_message.get_request()['data']
 
@@ -194,10 +194,10 @@ class Node(Thread):
 
         except RuntimeError:
 
-            logging.info("Socket communication between listener {}:{} and peer {}:{} broken".format(self.ip,
-                                                                                                    self.server_port,
-                                                                                                    peer_address[0],
-                                                                                                    peer_address[1]))
+            logging.debug("Socket communication between listener {}:{} and peer {}:{} broken".format(self.ip,
+                                                                                                     self.server_port,
+                                                                                                     peer_address[0],
+                                                                                                     peer_address[1]))
 
     def __authenticate(self,
                        snd_socket: socket
@@ -247,7 +247,7 @@ class Node(Thread):
                     self.peers = auth_ok.get_request()['data']
                     self.ledger = {ip: 10 for ip in self.peers}  # Initializing balance of each user to 10 BTM
                     self.peers.remove(self.ip)  # Removing own ip address from list of other users ip
-                    logging.info("Node {} successfully authenticated on the Bitcom network".format(self.username))
+                    logging.debug("Node {} successfully authenticated on the Bitcom network".format(self.username))
 
         except RuntimeError:
             logging.error("Socket communication broken at node {}:{}".format(self.ip,
@@ -267,7 +267,7 @@ class Node(Thread):
                 try:
                     node_listener.bind((self.ip, self.server_port))
                     is_bound = True
-                    logging.info("Node listener bound to {}:{}".format(self.ip, self.server_port))
+                    logging.debug("Node listener bound to {}:{}".format(self.ip, self.server_port))
 
                 except OSError:
                     logging.debug("Address {}:{} already used".format(self.ip, self.server_port))
@@ -308,7 +308,6 @@ class Node(Thread):
 
         while mining_condition:
 
-            logging.debug("Mining condition is {}".format(mining_condition))
             with Lock():
 
                 transactions_to_mine = deepcopy(self.pending_transactions)
@@ -362,17 +361,24 @@ class Node(Thread):
                 block_mined = Block(idx=self.blockchain.get_last_block().idx+1,
                                     prev_hash=self.blockchain.get_last_block().hash,
                                     transactions=transactions_to_mine)
+                logging.debug("New block with idx: {}".format(block_mined.idx))
+                print("New block is mined. You earned {} BTM".format(miner_transaction.amount))
 
                 # Broadcast block
+                logging.debug("Submitting block {}".format(block_mined.idx))
                 self.__submit_block()
+                logging.debug("Block submitted {}".format(block_mined.idx))
 
                 # Add to own Block List
                 self.blockchain.add(block_mined)
+                logging.debug("Block {} added to blockchain".format(block_mined.idx))
                 with Lock():
 
                     self.ledger = ledger
                     self.transaction_idx = idx
                     self.pending_transactions.clear()
+                    logging.debug("Ledger, transaction idx and pending transactions updated")
+                    logging.debug("Transaction idx: {}".format(self.transaction_idx))
 
             except BlockNotValidException as e:
 
@@ -404,7 +410,7 @@ class Node(Thread):
                     snd_socket.connect((peer_ip, self.server_port))
 
                 except OSError:
-                    logging.info("Could not connect to peer at {}:{}".format(peer_ip,
+                    logging.debug("Could not connect to peer at {}:{}".format(peer_ip,
                                                                              self.server_port))
 
                     return
@@ -415,7 +421,7 @@ class Node(Thread):
 
                 block_idx = BitcopBlock(Bitcop.BLOCK_ID, last_idx)
 
-                logging.info("Latest block idx: {}".format(last_idx))
+                logging.debug("Latest block idx: {}".format(last_idx))
 
                 logging.debug("Sending block idx to peer at {}".format(peer_ip))
                 send(snd_socket, block_idx)
@@ -426,12 +432,12 @@ class Node(Thread):
                 block_idx_peer = receive(snd_socket)
                 logging.debug("Received last block from peer at {}".format(peer_ip))
                 block_idx_peer_code = block_idx_peer.get_request()['code']
-                logging.info("Latest block idx message code: {}".format(block_idx_peer_code))
+                logging.debug("Latest block idx message code: {}".format(block_idx_peer_code))
 
                 if block_idx_peer_code == Bitcop.BLOCK_ID:
 
                     last_idx_peer = block_idx_peer.get_request()['data']
-                    logging.info("Latest block idx of peer: {}".format(last_idx_peer))
+                    logging.debug("Latest block idx of peer: {}".format(last_idx_peer))
 
                     with Lock():
 
@@ -456,7 +462,7 @@ class Node(Thread):
                     # Peer does not need the transactions
         except RuntimeError:
 
-            logging.info("Socket communication broken while sending bloks to peer at {}:{}".format(
+            logging.debug("Socket communication broken while sending bloks to peer at {}:{}".format(
                 peer_ip,
                 self.server_port
             ))
@@ -471,7 +477,7 @@ class Node(Thread):
         if self.authenticated:
 
             for peer_ip in self.neighbours_ip:
-                logging.info("Try to send the block with index {} to its neighbours".format(self.blockchain.get_last_block().idx))
+                logging.debug("Try to send the block with index {} to its neighbours".format(self.blockchain.get_last_block().idx))
                 try:
                     self.__send_block(peer_ip)
                 except RuntimeError:
@@ -499,7 +505,7 @@ class Node(Thread):
                     snd_socket.connect((peer_ip, self.server_port))
 
                 except OSError:
-                    logging.info("Could not connect to peer at {}:{}".format(peer_ip,
+                    logging.debug("Could not connect to peer at {}:{}".format(peer_ip,
                                                                              self.server_port))
                     return
 
@@ -510,7 +516,7 @@ class Node(Thread):
 
                 tran_idx = BitcopTransaction(Bitcop.TRAN_ID,
                                              last_idx)
-                logging.info("Latest transaction idx: {}".format(last_idx))
+                logging.debug("Latest transaction idx: {}".format(last_idx))
 
                 logging.debug("Sending transaction idx to peer at {}".format(peer_ip))
                 send(snd_socket, tran_idx)
@@ -521,12 +527,12 @@ class Node(Thread):
                 tran_idx_peer = receive(snd_socket)
                 logging.debug("Received last transaction from peer at {}".format(peer_ip))
                 tran_idx_peer_code = tran_idx_peer.get_request()['code']
-                logging.info("Latest transaction idx message code: {}".format(tran_idx_peer_code))
+                logging.debug("Latest transaction idx message code: {}".format(tran_idx_peer_code))
 
                 if tran_idx_peer_code == Bitcop.TRAN_ID:
 
                     last_idx_peer = tran_idx_peer.get_request()['data']
-                    logging.info("Latest transaction idx of peer: {}".format(last_idx_peer))
+                    logging.debug("Latest transaction idx of peer: {}".format(last_idx_peer))
 
                     with Lock():
 
@@ -554,7 +560,7 @@ class Node(Thread):
 
         except RuntimeError:
 
-                logging.info("Socket communication broken while sending transactions to peer at {}:{}".format(
+                logging.debug("Socket communication broken while sending transactions to peer at {}:{}".format(
                     peer_ip,
                     self.server_port
                 ))
@@ -640,8 +646,8 @@ class Node(Thread):
                 auth_client.connect(auth_server_address)
 
             except OSError:
-                logging.info("Server at {}:{} cannot be reached".format(self.authenticate_ip,
-                                                                        self.server_port))
+                logging.debug("Server at {}:{} cannot be reached".format(self.authenticate_ip,
+                                                                         self.server_port))
                 return
 
             while not self.authenticated:
