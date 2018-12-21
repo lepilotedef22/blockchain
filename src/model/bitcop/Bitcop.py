@@ -59,7 +59,7 @@ class Bitcop(ABC):
     NUMBER_BYTES_LENGTH: int = 2  # Number of bytes used to represent the length of the messages
     NUMBER_BYTES_CODE: int = 2  # Number of bytes used to represent the code
     NUMBER_BYTES_NONCE: int = 16  # Number of bytes of the nonce
-    NUMBER_0_MINING: int = 4  # Number of zeros that need to begin the hash of a mined block
+    NUMBER_0_MINING: int = 5  # Number of zeros that need to begin the hash of a mined block
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 

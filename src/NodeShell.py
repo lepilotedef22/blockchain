@@ -7,6 +7,7 @@ from src import Node, TransactionNotValidException, Transaction
 from cmd import Cmd
 import logging
 from argparse import ArgumentParser
+from time import strftime, localtime
 
 
 __date__ = "16.12.2018"
@@ -71,6 +72,7 @@ class NodeShell(Cmd):
         # Arg parsing
 
         pay_parser = ArgumentParser(
+            prog="pay",
             description="Sends money to another user."
         )
 
@@ -102,7 +104,7 @@ class NodeShell(Cmd):
         print("{}% transaction fees.".format(Transaction.TRANSACTION_FEES * 100))
         print("It will cost you {:.2f} BTM".format(amount + Transaction.TRANSACTION_FEES * amount))
         cond = input("Do you agree? Y(es)\n")
-        if cond.upper() == "Y":
+        if cond.upper() == "Y" or cond.upper() == "YES":
 
             try:
 
@@ -119,14 +121,18 @@ class NodeShell(Cmd):
     def do_status(self, arg) -> None:
         """
         Display the authentication status.
+        Display the IP address.
         Display the balance (in BTM).
+        Display the last block hash an index.
+        Display the number of pending transactions.
         """
 
         # Arg parsing
 
         status_parser = ArgumentParser(
-            description="""Display the authentication status, IP and current balance (in BTM).
-        """
+            prog='status',
+            description="""Display the authentication status, IP and current balance (in BTM), last block hash 
+            and index, and the number of pending transactions."""
         )
 
         try:
@@ -145,6 +151,17 @@ class NodeShell(Cmd):
             print("IP: {}".format(self.node.ip))
             print("Balance: {:.2f} BTM".format(self.node.ledger[self.node.ip]))
 
+            if self.node.blockchain.get_last_block() is not None:
+
+                print("Last block: \n\tNumber: {}\n\tHash: {}".format(self.node.blockchain.get_last_block().idx,
+                                                                      self.node.blockchain.get_last_block().hash))
+
+            else:
+
+                print("Last block: \n\tNumber: No block yet\n\tHash: ---")
+
+            print("Number of pending transactions: {}".format(len(self.node.pending_transactions)))
+
         else:
 
             print("Node is not authenticated on the BITCOM network.")
@@ -155,12 +172,90 @@ class NodeShell(Cmd):
          Display transactions.
         """
 
-        pass
+        # Args parsing
+
+        transaction_parser = ArgumentParser(
+            prog='transactions',
+            description="Shows the transaction history",
+            epilog="[date]: [in/out] [payer] -> [payee] [amount] BTM: [balance] BTM"
+        )
+
+        try:
+
+            transaction_parser.parse_args(arg.split())
+
+        except SystemExit:
+
+            return
+
+        disp_pending_transactions = []  # List of the transactions to be displayed in the pending transactions
+        for transaction in self.node.pending_transactions:
+
+            if self.node.ip == transaction.payer:
+
+                date: str = strftime("%a, %d %b %Y %H:%M:%S", localtime(transaction.timestamp))
+                disp_pending_transactions.append("{}: [-] {} -> {} {:.2f} BTM: {:.2f} BTM".format(
+                    date,
+                    transaction.payer,
+                    transaction.payee,
+                    transaction.amount,
+                    transaction.ledger[self.node.ip]
+                ))
+
+            elif self.node.ip == transaction.payee:
+
+                amount = transaction.amount / (1 + Transaction.TRANSACTION_FEES)
+                date: str = strftime("%a, %d %b %Y %H:%M:%S", localtime(transaction.timestamp))
+                disp_pending_transactions.append("{}: [-] {} -> {} {:.2f} BTM: {:.2f} BTM".format(
+                    date,
+                    transaction.payer,
+                    transaction.payee,
+                    amount,
+                    transaction.ledger[self.node.ip]
+                ))
+
+        disp_pending_transactions.reverse()
+        if len(disp_pending_transactions) == 0:
+
+            print("No pending transaction")
+
+        else:
+
+            print("Pending transactions:")
+
+            for transaction in disp_pending_transactions:
+
+                print(transaction)
+
+        if len(self.node.blockchain.get_transactions(self.node.ip)) == 0:
+
+            print("No transaction in blocks.")
+
+        else:
+
+            print("Transactions saved in blocks:")
+
+            for transaction in self.node.blockchain.get_transactions(self.node.ip):
+
+                print(transaction)
 
     def do_exit(self, arg) -> bool:
         """
         Exit the program. (^D)
         """
+
+        exit_parser = ArgumentParser(
+            prog="exit",
+            description="Exits the program..."
+        )
+
+        try:
+
+            exit_parser.parse_args(arg.split())
+
+        except SystemExit:
+
+            return False
 
         return True
 

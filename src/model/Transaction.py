@@ -17,7 +17,7 @@ class Transaction:
     """
 
     TRANSACTION_FEES: float = 0.01  # Fees used to pay the miners
-    BLOCK_MINED: float = 0.1  # Money offered to poorest user when a block is mined
+    BLOCK_MINED: float = 1  # Money offered to poorest user when a block is mined
 
     # ------------------------------------------------- CONSTRUCTOR ------------------------------------------------- #
 

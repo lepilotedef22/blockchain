@@ -3,8 +3,9 @@
 
 # ----------------------------------------------------- IMPORTS ----------------------------------------------------- #
 
-from src import Block
+from src import Block, Transaction
 from typing import List, Optional
+from time import strftime, localtime
 
 
 __date__ = "04.12.2018"
@@ -74,7 +75,7 @@ class Blockchain:
 
     def get_transactions(self,
                          target_ip: str
-                         ) -> Optional[List[str]]:
+                         ) -> List[str]:
         """
         Returns the list of the transactions to be displayed in the shell
         :param target_ip: ip of interest
@@ -88,16 +89,26 @@ class Blockchain:
 
                 if transaction.payer == target_ip:
 
-                    transaction_list.append("[-] {} -> {} {} BTM: {} BTM".format(transaction.payer,
-                                                                                 transaction.payee,
-                                                                                 transaction.amount,
-                                                                                 transaction.ledger[target_ip]))
+                    date: str = strftime("%a, %d %b %Y %H:%M:%S", localtime(transaction.timestamp))
+                    transaction_list.append("{}: [-] {} -> {} {:.2f} BTM: {:.2f} BTM".format(
+                        date,
+                        transaction.payer,
+                        transaction.payee,
+                        transaction.amount,
+                        transaction.ledger[target_ip]
+                    ))
 
                 elif transaction.payee == target_ip:
 
-                    transaction_list.append("[+] {} -> {} {} BTM: {} BTM".format(transaction.payer,
-                                                                                 transaction.payee,
-                                                                                 transaction.amount,
-                                                                                 transaction.ledger[target_ip]))
+                    amount = transaction.amount / (1 + Transaction.TRANSACTION_FEES)
+                    date: str = strftime("%a, %d %b %Y %H:%M:%S", localtime(transaction.timestamp))
+                    transaction_list.append("{}: [+] {} -> {} {:.2f} BTM: {:.2f} BTM".format(
+                        date,
+                        transaction.payer,
+                        transaction.payee,
+                        amount,
+                        transaction.ledger[target_ip]
+                    ))
 
-        return transaction_list.reverse()
+        transaction_list.reverse()
+        return transaction_list
