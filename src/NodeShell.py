@@ -51,7 +51,7 @@ class NodeShell(Cmd):
         """
 
         print(self.intro)  # Printing program title
-        print("\nEnter 'help' to see the commands available\n")
+        print("\nEnter 'help' to see the available commands\n")
         self.intro = ''
 
     def postloop(self) -> None:
