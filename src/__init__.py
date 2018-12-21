@@ -21,4 +21,5 @@ from src.Authenticate import Authenticate
 # ------------------------------------------------------- VARS ------------------------------------------------------- #
 
 __author__ = "Wilson Daubry, Léonard Steyaert, Arthur Van Heirstraeten, Denis Verstraeten"
+__version__ = "1.0"
 
