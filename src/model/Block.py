@@ -44,7 +44,7 @@ class Block:
             self.transactions: List[Transaction] = transactions
             self.nonce: int = getrandbits(8 * Bitcop.NUMBER_BYTES_NONCE)
             self.timestamp: float = time()
-            self.hash = self.block_calculation()
+            self.hash: str = self.block_computation()
 
             if self.hash[:Bitcop.NUMBER_0_MINING] != Bitcop.NUMBER_0_MINING * "0":
 
@@ -56,11 +56,12 @@ class Block:
 
             self.idx = block_json['idx']
             self.prev_hash = block_json['prev_hash']
-            self.transactions = block_json['transactions']
+            self.transactions = [Transaction(transaction_json=transaction_json)
+                                 for transaction_json in block_json['transactions']]
             self.nonce = block_json['nonce']
             self.timestamp = block_json['timestamp']
-            self.hash = block_json['cur_hash']
-            hash_check = self.block_calculation()
+            self.hash = block_json['hash']
+            hash_check = self.block_computation()
 
             if self.hash != hash_check:
 
@@ -77,21 +78,21 @@ class Block:
 
         return {'idx': self.idx,
                 'prev_hash': self.prev_hash,
-                'transactions': self.transactions,
+                'transactions': [transaction.get_json() for transaction in self.transactions],
                 'nonce': self.nonce,
                 'timestamp': self.timestamp,
-                'cur_hash': self.hash}
+                'hash': self.hash}
 
-    def block_calculation(self) -> str:
+    def block_computation(self) -> str:
         """
         Computes the hash of the current block based on the previous one
         :return: hash of the block in bytes
         """
 
-        hash_arg = self.prev_hash
+        hash_arg = str(self.idx).encode('utf-8') + self.prev_hash.encode('utf-8')
         for transaction in self.transactions:
+
             hash_arg += dumps(transaction.get_json()).encode('utf-8')
 
-        hash_arg += self.nonce
-        cur_hash = sha256(hash_arg).hexdigest()
-        return cur_hash
+        hash_arg += str(self.nonce).encode('utf-8') + str(self.timestamp).encode('utf-8')
+        return sha256(hash_arg).hexdigest()
