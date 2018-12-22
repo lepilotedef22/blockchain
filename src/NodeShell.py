@@ -206,7 +206,7 @@ class NodeShell(Cmd):
 
                 amount = transaction.amount / (1 + Transaction.TRANSACTION_FEES)
                 date: str = strftime("%a, %d %b %Y %H:%M:%S", localtime(transaction.timestamp))
-                disp_pending_transactions.append("{}: [-] {} -> {} {:.2f} BTM: {:.2f} BTM".format(
+                disp_pending_transactions.append("{}: [+] {} -> {} {:.2f} BTM: {:.2f} BTM".format(
                     date,
                     transaction.payer,
                     transaction.payee,
